@@ -5,7 +5,7 @@ import { LiveUpdate, type LoadPayload } from './liveUpdate';
 import { PreviewPanel } from './PreviewPanel';
 import { discover, isInside, type DiscoverResult } from './project';
 import { ProjectFs } from './projectFs';
-import { clampDelay, errorText, formatCompiled, formatUnplaced } from './sessionUtil';
+import { clampDelay, errorText, formatCompiled } from './sessionUtil';
 import { SourceReader } from './sources';
 
 type Compiled = Extract<WebviewToHost, { type: 'compiled' }>;
@@ -173,14 +173,10 @@ export class PreviewSession {
     if (this.disposed) return;
     this.compiled = msg;
     if (this.keepLog) this.compiledLog.push(msg);
+    // Every message is logged, placed or not (spec §3), so what `apply` couldn't place (no
+    // file, or a file outside the project) is in the log too.
     this.log.appendLine(formatCompiled(msg));
-    const unplaced = this.diagnostics.apply(
-      msg.generation,
-      this.live.generation,
-      msg.messages,
-      this.relToUri,
-    );
-    for (const m of unplaced) this.log.appendLine(formatUnplaced(m));
+    this.diagnostics.apply(msg.generation, this.live.generation, msg.messages, this.relToUri);
   }
 
   /** A document's text changed (or it closed): restart the idle timer if the load uses it. */

@@ -5,21 +5,26 @@ type Compiled = Extract<WebviewToHost, { type: 'compiled' }>;
 const DEFAULT_DELAY_MS = 300;
 const MAX_DELAY_MS = 2000;
 
-/** The Output channel's line for each `compiled`: `[gen N] ok|errors (ms)`. */
+/**
+ * The Output channel's block for each `compiled` (spec §3: timings and the raw Verilator
+ * output): `[gen N] ok|errors (ms)`, then every message, placed or not, one per line.
+ */
 export function formatCompiled(c: Compiled): string {
-  return `[gen ${c.generation}] ${c.ok ? 'ok' : 'errors'} (${c.ms} ms)`;
+  const header = `[gen ${c.generation}] ${c.ok ? 'ok' : 'errors'} (${c.ms} ms)`;
+  return [header, ...c.messages.map(formatMessage)].join('\n');
 }
 
 /** `<message>\n<Name>: <message>`: a stack whose first line repeats the message before it. */
 const REPEATED_STACK_HEAD = /^([\s\S]+?)\n[\w$.]*: \1(?=\n|$)/;
 
 /**
- * A message the Problems view can't show (no file, or a file outside the project), as logged.
- * A build failure carries `message\nstack`; the stack's `Error: <message>` line is dropped.
+ * One message as logged: `  file:line:col: severity: message`, without the position when it
+ * has no file. A build failure carries `message\nstack`; the stack's `Error: <message>` line
+ * is dropped.
  */
-export function formatUnplaced(m: VerilatorMessage): string {
+export function formatMessage(m: VerilatorMessage): string {
   const where = m.file ? `${m.file}:${m.line}:${m.column}: ` : '';
-  return `  ${m.severity}: ${where}${m.message.replace(REPEATED_STACK_HEAD, '$1')}`;
+  return `  ${where}${m.severity}: ${m.message.replace(REPEATED_STACK_HEAD, '$1')}`;
 }
 
 /** `verivga.liveDelay`, kept within its declared 0–2000 ms range. */

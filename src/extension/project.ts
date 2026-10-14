@@ -70,6 +70,14 @@ function basename(path: string): string {
   return path.slice(path.lastIndexOf('/') + 1);
 }
 
+/** `root` as the user sees it in the workspace: the folder's name, then the path below it. */
+function displayPath(folder: vscode.WorkspaceFolder, root: vscode.Uri): string {
+  const base = folder.uri.path.replace(/\/$/, '');
+  const below = root.path.startsWith(base + '/') ? root.path.slice(base.length + 1) : '';
+  const rel = below.replace(/\/$/, '');
+  return rel ? `${folder.name}/${rel}` : folder.name;
+}
+
 export async function discover(o: {
   activeUri?: vscode.Uri;
   folders: readonly vscode.WorkspaceFolder[];
@@ -99,7 +107,8 @@ export async function discover(o: {
     .map(([name]) => name)
     .sort();
   if (names.length === 0) {
-    return { ok: false, reason: 'no-sources', message: 'No Verilog files found in ' + root.path };
+    const message = `No Verilog sources found in ${displayPath(folder, root)}`;
+    return { ok: false, reason: 'no-sources', message };
   }
   const files = new Map(names.map((n) => [n, vscode.Uri.joinPath(root, n)]));
   const texts: Record<string, string> = {};

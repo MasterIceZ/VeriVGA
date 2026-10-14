@@ -165,6 +165,22 @@ describe('discover', () => {
     });
     expect(r).toMatchObject({ ok: false, reason: 'no-sources' });
   });
+
+  // Spec §3: "No Verilog sources found in <folder>", workspace-relative (no absolute paths,
+  // which look odd for github.dev and web URIs).
+  test('no-sources message names the folder, not an absolute path', async () => {
+    const proj = { uri: Uri.file('/home/me/proj'), name: 'proj', index: 0 };
+    const fs = createMemFs({ '/home/me/proj/docs/notes.md': '# hi' });
+    const atRoot = await discover({ folders: [proj] as never, topModuleSetting: '', fs });
+    expect(atRoot).toMatchObject({ message: 'No Verilog sources found in proj' });
+    const inDocs = await discover({
+      activeUri: Uri.file('/home/me/proj/docs/notes.md') as never,
+      folders: [proj] as never,
+      topModuleSetting: '',
+      fs,
+    });
+    expect(inDocs).toMatchObject({ message: 'No Verilog sources found in proj/docs' });
+  });
 });
 
 describe('pickFolder', () => {
