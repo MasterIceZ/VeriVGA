@@ -22,7 +22,14 @@ files can be re-synced.
   Removed the Vite `?url` fetch (a wasm binary or module is now required), added the
   `wasmModule` path via `instantiateWasm` so the worker can reuse one compiled module,
   nested source directories are created and passed as `-I`. Flags are unchanged.
+- `src/sim/verilator/compile.ts` (Task 11): `printErr` also keeps `%Error` lines that
+  `ErrorParser` drops, via `unparsedError`. Upstream loses them, so a wrong `--top-module`
+  surfaced as "XML parsing failed" and `%Error-PINNOTFOUND` (a coded error) vanished. A
+  location-less line becomes `{ type: 'error', file: '', line: 1, column: 1, message }`; a
+  coded line keeps its `file:line:col` and code. The "Exiting due to …" summary is skipped,
+  because Verilator also prints it for warnings-only runs. `ErrorParser.ts` is unchanged.
 - `src/sim/vga-integration.spec.ts`: fixture paths (examples, golden PNG) and wasm path only.
 - `src/sim/hdlwasm-integration.spec.ts`, `src/sim/hdlruntime.spec.ts`: wasm path only.
 
-New (not upstream): `src/sim/verilator/messages.ts` and its spec, `src/shared/protocol.ts`.
+New (not upstream): `src/sim/verilator/messages.ts` and its spec,
+`src/sim/verilator/compile.spec.ts`, `src/shared/protocol.ts`.

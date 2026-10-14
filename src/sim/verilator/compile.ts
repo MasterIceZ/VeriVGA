@@ -16,6 +16,25 @@ export interface ICompileOptions {
   wasmModule?: WebAssembly.Module;
 }
 
+/**
+ * VeriVGA: an `%Error` line ErrorParser didn't parse, such as a wrong `--top-module`
+ * (no location) or `%Error-PINNOTFOUND: file:line:col: ...`. The "Exiting due to N error(s)"
+ * summary is skipped: it also ends warnings-only runs, which still produce XML.
+ */
+function unparsedError(line: string): IErrorMessage | undefined {
+  const m = /^%Error(?:-([A-Z0-9_]+))?: (?:([^:\s]+):(\d+):(\d+): )?(.*)$/.exec(line);
+  if (!m || /^Exiting due to /.test(m[5])) return undefined;
+  const [, code, file, lineNo, column, message] = m;
+  return {
+    type: 'error',
+    ...(code !== undefined && { warningClass: code }),
+    file: file ?? '',
+    line: lineNo ? parseInt(lineNo) : 1,
+    column: column ? parseInt(column) : 1,
+    message,
+  };
+}
+
 /** Runs Verilator and returns the raw XML (when there were no errors) plus its messages. */
 export async function runVerilator(
   opts: RunVerilatorOptions,
@@ -44,7 +63,13 @@ export async function runVerilator(
     print: console.log,
     printErr: (message: string) => {
       console.log(message);
+      const parsed = errorParser.errors.length;
       errorParser.feedLine(message);
+      // VeriVGA: keep %Error lines ErrorParser drops (no location, or a `-CODE` suffix).
+      if (errorParser.errors.length === parsed) {
+        const unparsed = unparsedError(message);
+        if (unparsed) errorParser.errors.push(unparsed);
+      }
     },
   });
   await verilatorInst.ready;
