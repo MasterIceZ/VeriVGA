@@ -493,6 +493,45 @@ describe('failures keep the old sim', () => {
     expect(t.banner.showMessage.mock.lastCall?.[0]).toBe('Compilation failed (no output)');
   });
 
+  test('a build failure posts the stack (for the Output channel); the banner shows only the message', async () => {
+    const t = await setup();
+    await compileOk(t, 1);
+    const stack = 'Error: unsupported construct\n    at HDLModuleWASM.init (hdlwasm.ts:1:1)';
+    t.buildSim.mockResolvedValueOnce({ ok: false, message: 'unsupported construct', stack });
+    t.orchestrator.onHostMessage(load(2));
+    t.worker().result(2);
+    await flush();
+
+    expect(t.banner.showMessage.mock.lastCall?.[0]).toBe('unsupported construct');
+    expect(t.compiled()[1]).toMatchObject({
+      generation: 2,
+      ok: false,
+      messages: [
+        {
+          severity: 'error',
+          file: '',
+          line: 1,
+          column: 1,
+          message: `unsupported construct\n${stack}`,
+        },
+      ],
+    });
+    expect(t.loop.setSim).toHaveBeenCalledTimes(1); // the old sim keeps running
+  });
+
+  test('a build failure without a stack (adapter.validate) posts just the message', async () => {
+    const t = await setup();
+    const message = "Top module `g` doesn't have the TinyTapeout port list (missing: ui_in)";
+    t.buildSim.mockResolvedValueOnce({ ok: false, message });
+    t.orchestrator.onHostMessage(load(1));
+    t.worker().result(1);
+    await flush();
+    expect(t.compiled()[0].messages).toEqual([
+      { severity: 'error', file: '', line: 1, column: 1, message },
+    ]);
+    expect(t.banner.showMessage.mock.lastCall?.[0]).toBe(message);
+  });
+
   test('a status message shows in the banner and the state becomes error', async () => {
     const t = await setup();
     t.orchestrator.onHostMessage({ type: 'status', message: 'No Verilog sources found in `x`' });

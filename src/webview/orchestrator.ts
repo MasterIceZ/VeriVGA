@@ -271,7 +271,10 @@ export class Orchestrator {
     if (!built.ok) {
       this.log.error(`[verivga] gen ${generation}: ${built.stack ?? built.message}`);
       this.showMessage(built.message);
-      this.postCompiled(generation, false, [failure(built.message)]);
+      // The full stack rides along in the file-less (unplaced) message, which the host logs
+      // to the Output channel (spec §3). The banner shows only the message.
+      const text = built.stack ? `${built.message}\n${built.stack}` : built.message;
+      this.postCompiled(generation, false, [failure(text)]);
       return;
     }
     this.simGeneration.set(built.sim, generation);
