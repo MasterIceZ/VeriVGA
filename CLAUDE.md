@@ -72,14 +72,14 @@ status bar           ◀──stats (≤ 2/s)──────────   ui
 ## Layout (planned)
 
 ```
-src/extension/   extension.ts, PreviewPanel.ts, project.ts, diagnostics.ts, examples.ts
-src/webview/     main.ts (bridge + render loop), compileWorker.ts, controls.ts, overlay.ts, audio/, styles.css
+src/extension/   extension.ts, PreviewPanel.ts, project.ts, sources.ts, liveUpdate.ts, diagnostics.ts
+src/webview/     main.ts, compileQueue.ts, compileWorker.ts, simHost.ts, renderLoop.ts, ui/, audio/ (v1)
 src/webview/adapters/  tinytapeout.ts (MVP); generic.ts comes in v2. The only place pin layouts live.
 src/shared/      protocol.ts (ALL host↔webview message types), verilog.ts
 src/sim/         ported simulator + verilator/ (GPL-3.0, keep headers)
 examples/        TT-layout presets
 test/unit/       vitest   test/golden/  reference PNGs   test/e2e/  @vscode/test-electron
-docs/            requirements.md, specs
+docs/            requirements.md, superpowers/specs/ (approved designs), superpowers/plans/
 ```
 
 ## Commands (planned)
