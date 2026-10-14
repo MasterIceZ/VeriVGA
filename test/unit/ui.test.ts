@@ -9,7 +9,12 @@ function key(k: string, init: KeyboardEventInit = {}) {
 
 function mkControls() {
   document.body.innerHTML = '<div id="root"></div>';
-  const h = { onUiIn: vi.fn(), onReset: vi.fn(), onPauseToggle: vi.fn() };
+  const h = {
+    onUiIn: vi.fn(),
+    onGamepad: vi.fn(),
+    onReset: vi.fn(),
+    onPauseToggle: vi.fn(),
+  };
   const root = document.getElementById('root')!;
   const c = new Controls(root, h);
   return { c, h, root };
@@ -65,6 +70,97 @@ describe('Controls', () => {
     expect(comp.hidden).toBe(true);
     c.setCompiling(true);
     expect(comp.hidden).toBe(false);
+  });
+});
+
+function keyUp(k: string, init: KeyboardEventInit = {}) {
+  document.dispatchEvent(new KeyboardEvent('keyup', { key: k, bubbles: true, ...init }));
+}
+
+describe('Controls gamepad', () => {
+  const gp = (root: HTMLElement) =>
+    root.querySelector<HTMLButtonElement>('button[data-action="gamepad"]')!;
+  const pad = (root: HTMLElement) => root.querySelector<HTMLElement>('.gamepad')!;
+  const padBtn = (root: HTMLElement, title: string) =>
+    root.querySelector<HTMLButtonElement>(`.gamepad button[title="${title}"]`)!;
+
+  test('toggle shows the pad and disables toggles 4-6 only', () => {
+    const { h, root } = mkControls();
+    expect(pad(root).hidden).toBe(true);
+    gp(root).click();
+    expect(h.onGamepad).toHaveBeenLastCalledWith(true, 0);
+    expect(gp(root).getAttribute('aria-pressed')).toBe('true');
+    expect(pad(root).hidden).toBe(false);
+    const t = root.querySelectorAll<HTMLButtonElement>('button[data-bit]');
+    expect([...t].map((b) => b.disabled)).toEqual(
+      [0, 1, 2, 3, 4, 5, 6, 7].map((i) => i >= 4 && i <= 6),
+    );
+    expect(pad(root).querySelectorAll('button').length).toBe(12);
+    gp(root).click();
+    expect(h.onGamepad).toHaveBeenLastCalledWith(false, 0);
+    expect(pad(root).hidden).toBe(true);
+    expect([...t].some((b) => b.disabled)).toBe(false);
+  });
+
+  test('a keydown/keyup presses and releases bit 8; repeat is ignored', () => {
+    const { h, root } = mkControls();
+    gp(root).click();
+    key('a');
+    expect(h.onGamepad).toHaveBeenLastCalledWith(true, 1 << 8);
+    const calls = h.onGamepad.mock.calls.length;
+    key('a', { repeat: true });
+    expect(h.onGamepad.mock.calls.length).toBe(calls);
+    key('ArrowUp');
+    expect(h.onGamepad).toHaveBeenLastCalledWith(true, (1 << 8) | (1 << 4));
+    keyUp('a');
+    expect(h.onGamepad).toHaveBeenLastCalledWith(true, 1 << 4);
+    key('a', { ctrlKey: true });
+    expect(h.onGamepad).toHaveBeenLastCalledWith(true, 1 << 4);
+  });
+
+  test('r is the R shoulder in gamepad mode; Shift+R resets; off, r resets', () => {
+    const { h, root } = mkControls();
+    gp(root).click();
+    key('r');
+    expect(h.onGamepad).toHaveBeenLastCalledWith(true, 1 << 11);
+    expect(h.onReset).not.toHaveBeenCalled();
+    keyUp('r');
+    key('R', { shiftKey: true });
+    expect(h.onReset).toHaveBeenCalledTimes(1);
+    gp(root).click();
+    key('r');
+    expect(h.onReset).toHaveBeenCalledTimes(2);
+  });
+
+  test('digits 4-6 are ignored in gamepad mode, others still toggle', () => {
+    const { h, root } = mkControls();
+    gp(root).click();
+    key('5');
+    expect(h.onUiIn).not.toHaveBeenCalled();
+    key('3');
+    expect(h.onUiIn).toHaveBeenLastCalledWith(0b1000);
+    gp(root).click();
+    key('5');
+    expect(h.onUiIn).toHaveBeenLastCalledWith(0b101000);
+  });
+
+  test('pointer presses and releases A; turning off releases held buttons', () => {
+    const { h, root } = mkControls();
+    gp(root).click();
+    const a = padBtn(root, 'A button');
+    a.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    expect(h.onGamepad).toHaveBeenLastCalledWith(true, 1 << 8);
+    expect(a.getAttribute('aria-pressed')).toBe('true');
+    a.dispatchEvent(new Event('pointerup', { bubbles: true }));
+    expect(h.onGamepad).toHaveBeenLastCalledWith(true, 0);
+    padBtn(root, 'Left bumper').dispatchEvent(new Event('pointerdown'));
+    expect(h.onGamepad).toHaveBeenLastCalledWith(true, 1 << 10);
+    padBtn(root, 'Left bumper').dispatchEvent(new Event('pointerleave'));
+    expect(h.onGamepad).toHaveBeenLastCalledWith(true, 0);
+    padBtn(root, 'Select').dispatchEvent(new Event('pointerdown'));
+    gp(root).click();
+    expect(h.onGamepad).toHaveBeenLastCalledWith(false, 0);
+    expect(padBtn(root, 'Select').getAttribute('aria-pressed')).toBe('false');
   });
 });
 

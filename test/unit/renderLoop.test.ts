@@ -99,10 +99,35 @@ describe('RenderLoop', () => {
     loop.setSim(a);
     tick(0);
     loop.uiIn = 0x28;
-    expect(adapter.setInputs).toHaveBeenLastCalledWith(a.mod, 0x28);
+    expect(adapter.setInputs).toHaveBeenLastCalledWith(a.mod, loop.input);
+    expect(loop.input.uiIn).toBe(0x28);
     loop.setSim(b);
     tick(16);
-    expect(adapter.setInputs).toHaveBeenLastCalledWith(b.mod, 0x28);
+    expect(adapter.setInputs).toHaveBeenLastCalledWith(b.mod, loop.input);
+    expect(loop.input.uiIn).toBe(0x28);
+  });
+
+  test('gamepad state persists across setSim and reaches renderFrame', () => {
+    const { loop, adapter, tick } = setup();
+    const a = makeSim('a');
+    const b = makeSim('b');
+    loop.setSim(a);
+    tick(0);
+    loop.setGamepad(true, 0x100);
+    expect(adapter.setInputs).toHaveBeenLastCalledWith(a.mod, {
+      uiIn: 0,
+      gamepad: { enabled: true, buttons: 0x100 },
+    });
+    loop.setSim(b);
+    tick(16);
+    expect(adapter.setInputs).toHaveBeenLastCalledWith(b.mod, loop.input);
+    expect(adapter.renderFrame.mock.lastCall?.[3]).toEqual({
+      uiIn: 0,
+      gamepad: { enabled: true, buttons: 0x100 },
+    });
+    loop.setGamepad(false, 0);
+    tick(32);
+    expect(adapter.renderFrame.mock.lastCall?.[3].gamepad).toEqual({ enabled: false, buttons: 0 });
   });
 
   test('reset resets the current sim and keeps uiIn', () => {
@@ -113,7 +138,8 @@ describe('RenderLoop', () => {
     loop.uiIn = 3;
     loop.reset();
     expect(adapter.reset).toHaveBeenCalledWith(a.mod);
-    expect(adapter.setInputs).toHaveBeenLastCalledWith(a.mod, 3);
+    expect(adapter.setInputs).toHaveBeenLastCalledWith(a.mod, loop.input);
+    expect(loop.input.uiIn).toBe(3);
   });
 
   test('stats throttled to one per 500 ms', () => {

@@ -84,3 +84,71 @@ body {
 [hidden] {
   display: none !important;
 }
+
+.gamepad {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 4px 8px;
+}
+
+.gamepad button {
+  min-width: 32px;
+  color: var(--vscode-button-secondaryForeground);
+  background: var(--vscode-button-secondaryBackground);
+  border: 1px solid var(--vscode-button-border, transparent);
+  padding: 4px 8px;
+  cursor: pointer;
+  user-select: none;
+  touch-action: none;
+}
+
+.gamepad button:hover {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.gamepad button[aria-pressed='true'] {
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+}
+
+.pad-shoulder,
+.pad-mid {
+  display: flex;
+  gap: 4px;
+}
+
+.pad-dpad,
+.pad-face {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  grid-template-rows: repeat(3, auto);
+  gap: 2px;
+}
+
+.pad-up {
+  grid-area: 1 / 2;
+}
+.pad-left {
+  grid-area: 2 / 1;
+}
+.pad-right {
+  grid-area: 2 / 3;
+}
+.pad-down {
+  grid-area: 3 / 2;
+}
+.pad-x {
+  grid-area: 1 / 2;
+}
+.pad-y {
+  grid-area: 2 / 1;
+}
+.pad-a {
+  grid-area: 2 / 3;
+}
+.pad-b {
+  grid-area: 3 / 2;
+}

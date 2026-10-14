@@ -38,11 +38,14 @@ test('stripes builds, validates and renders a frame with vsync', async () => {
     topModule: 'tt_um_vga_example',
     dataFiles: {},
     adapter: tinyTapeoutAdapter,
-    uiIn: 0,
+    input: { uiIn: 0, gamepad: { enabled: false, buttons: 0 } },
   });
   if (!built.ok) throw new Error(built.message);
   const pixels = new Uint8Array(VGA_WIDTH * VGA_HEIGHT * 4);
-  const r = tinyTapeoutAdapter.renderFrame(built.sim.mod, pixels, built.sim.polarity);
+  const r = tinyTapeoutAdapter.renderFrame(built.sim.mod, pixels, built.sim.polarity, {
+    uiIn: 0,
+    gamepad: { enabled: false, buttons: 0 },
+  });
   built.sim.dispose();
   expect(r.vsyncSeen).toBe(true);
 });
@@ -63,7 +66,7 @@ endmodule
     topModule: 'plain',
     dataFiles: {},
     adapter: tinyTapeoutAdapter,
-    uiIn: 0,
+    input: { uiIn: 0, gamepad: { enabled: false, buttons: 0 } },
   });
   expect(built.ok).toBe(false);
   if (built.ok) return;

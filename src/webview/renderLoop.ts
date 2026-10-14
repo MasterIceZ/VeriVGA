@@ -1,5 +1,5 @@
 import { VGA_HEIGHT, VGA_WIDTH } from '../sim/vga';
-import type { VgaAdapter } from './adapters/types';
+import type { InputState, VgaAdapter } from './adapters/types';
 import type { RunningSim } from './simHost';
 
 const STATS_INTERVAL_MS = 500;
@@ -34,7 +34,7 @@ export class RenderLoop {
 
   private current: RunningSim | null = null;
   private pending: RunningSim | null = null;
-  private input = 0;
+  private readonly state: InputState = { uiIn: 0, gamepad: { enabled: false, buttons: 0 } };
   private isPaused = false;
   private visible = true;
   private disposed = false;
@@ -62,13 +62,29 @@ export class RenderLoop {
     return this.isPaused;
   }
 
+  /** What the user drives. The same object every time; it carries over to a swapped-in sim. */
+  get input(): InputState {
+    return this.state;
+  }
+
   get uiIn(): number {
-    return this.input;
+    return this.state.uiIn;
   }
 
   set uiIn(v: number) {
-    this.input = v;
-    if (this.current) this.o.adapter.setInputs(this.current.mod, v);
+    this.state.uiIn = v;
+    this.apply();
+  }
+
+  /** Gamepad Pmod on/off and the held-button mask. */
+  setGamepad(enabled: boolean, buttons: number): void {
+    this.state.gamepad.enabled = enabled;
+    this.state.gamepad.buttons = buttons;
+    this.apply();
+  }
+
+  private apply(): void {
+    if (this.current) this.o.adapter.setInputs(this.current.mod, this.state);
   }
 
   setSim(next: RunningSim): void {
@@ -93,7 +109,7 @@ export class RenderLoop {
   reset(): void {
     if (!this.current) return;
     this.o.adapter.reset(this.current.mod);
-    this.o.adapter.setInputs(this.current.mod, this.input);
+    this.o.adapter.setInputs(this.current.mod, this.state);
   }
 
   dispose(): void {
@@ -112,7 +128,7 @@ export class RenderLoop {
 
     if (this.pending) {
       const old = this.current;
-      this.o.adapter.setInputs(this.pending.mod, this.input);
+      this.o.adapter.setInputs(this.pending.mod, this.state);
       this.current = this.pending;
       this.pending = null;
       old?.dispose();
@@ -122,7 +138,12 @@ export class RenderLoop {
 
     let vsyncSeen: boolean;
     try {
-      vsyncSeen = this.o.adapter.renderFrame(sim.mod, this.pixels, sim.polarity).vsyncSeen;
+      vsyncSeen = this.o.adapter.renderFrame(
+        sim.mod,
+        this.pixels,
+        sim.polarity,
+        this.state,
+      ).vsyncSeen;
     } catch (e) {
       this.isPaused = true;
       if (!this.errorReported) {

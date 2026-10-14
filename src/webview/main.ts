@@ -37,6 +37,7 @@ const controls = new Controls(controlsRoot, {
   onUiIn: (v) => {
     loop.uiIn = v;
   },
+  onGamepad: (enabled, buttons) => loop.setGamepad(enabled, buttons),
   onReset: () => orchestrator.reset(),
   onPauseToggle: () => orchestrator.togglePause(),
 });

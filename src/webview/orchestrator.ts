@@ -22,7 +22,7 @@ export interface Compiler {
 
 export type LoopLike = Pick<
   RenderLoop,
-  'sim' | 'uiIn' | 'paused' | 'setSim' | 'pause' | 'resume' | 'reset'
+  'sim' | 'input' | 'paused' | 'setSim' | 'pause' | 'resume' | 'reset'
 >;
 export type BannerLike = Pick<Banner, 'showErrors' | 'showMessage' | 'hide'>;
 export type ControlsLike = Pick<Controls, 'setPaused' | 'setFps' | 'setCompiling'>;
@@ -272,7 +272,7 @@ export class Orchestrator {
       topModule: job.topModule,
       dataFiles: job.dataFiles,
       adapter: this.d.adapter,
-      uiIn: this.d.loop.uiIn,
+      input: this.d.loop.input,
     });
     if (!built.ok) {
       this.log.error(`[verivga] gen ${generation}: ${built.stack ?? built.message}`);

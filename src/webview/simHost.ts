@@ -1,7 +1,7 @@
 import { HDLModuleWASM } from '../sim/hdlwasm';
 import { parseVerilatorXml } from '../sim/verilator/compile';
 import type { SyncPolarity } from '../sim/vga';
-import type { VgaAdapter } from './adapters/types';
+import type { InputState, VgaAdapter } from './adapters/types';
 
 export interface RunningSim {
   mod: HDLModuleWASM;
@@ -18,7 +18,7 @@ export interface BuildOptions {
   topModule: string;
   dataFiles: Record<string, string>;
   adapter: VgaAdapter;
-  uiIn: number;
+  input: InputState;
 }
 
 export async function buildSim(o: BuildOptions): Promise<BuildResult> {
@@ -39,7 +39,7 @@ export async function buildSim(o: BuildOptions): Promise<BuildResult> {
     o.adapter.reset(mod);
     const polarity = o.adapter.detectPolarity(mod);
     o.adapter.reset(mod);
-    o.adapter.setInputs(mod, o.uiIn);
+    o.adapter.setInputs(mod, o.input);
 
     const built = mod;
     return {

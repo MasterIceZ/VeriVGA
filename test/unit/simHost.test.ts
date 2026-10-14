@@ -30,7 +30,7 @@ async function build(src: string, dataFiles: Record<string, string> = {}, uiIn =
     topModule: 'tt_um_t',
     dataFiles,
     adapter: tinyTapeoutAdapter,
-    uiIn,
+    input: { uiIn, gamepad: { enabled: false, buttons: 0 } },
   });
 }
 
@@ -43,7 +43,10 @@ endmodule
 `);
   if (!built.ok) throw new Error(built.message);
   const pixels = new Uint8Array(VGA_WIDTH * VGA_HEIGHT * 4);
-  const r = tinyTapeoutAdapter.renderFrame(built.sim.mod, pixels, built.sim.polarity);
+  const r = tinyTapeoutAdapter.renderFrame(built.sim.mod, pixels, built.sim.polarity, {
+    uiIn: 0,
+    gamepad: { enabled: false, buttons: 0 },
+  });
   built.sim.dispose();
   expect(r.vsyncSeen).toBe(false);
 });
@@ -95,7 +98,7 @@ test('malformed xml → ok:false, no throw', async () => {
     topModule: 'x',
     dataFiles: {},
     adapter: tinyTapeoutAdapter,
-    uiIn: 0,
+    input: { uiIn: 0, gamepad: { enabled: false, buttons: 0 } },
   });
   expect(built.ok).toBe(false);
 });

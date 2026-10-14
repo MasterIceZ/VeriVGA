@@ -97,7 +97,7 @@ async function setup() {
   const workers: FakeWorker[] = [];
   const loop = {
     sim: null as RunningSim | null,
-    uiIn: 0,
+    input: { uiIn: 0x28, gamepad: { enabled: true, buttons: 0x100 } },
     paused: false,
     // The fake swaps at once; the real loop swaps on the next frame.
     setSim: vi.fn((sim: RunningSim) => {
@@ -200,7 +200,7 @@ describe('boot', () => {
       post: (m) => posted.push(m),
       loop: {
         sim: null,
-        uiIn: 0,
+        input: { uiIn: 0, gamepad: { enabled: false, buttons: 0 } },
         paused: false,
         setSim: vi.fn(),
         pause: vi.fn(),
@@ -436,7 +436,11 @@ describe('success path (ruling 8)', () => {
 
     expect(t.calls).toEqual(['setSim:gen-1', 'banner.hide', 'compiled:1']);
     expect(t.compiled()[0]).toMatchObject({ generation: 1, ok: true, messages: [warning] });
-    expect(t.buildSim.mock.lastCall?.[0]).toMatchObject({ xml: 'gen-1', topModule: 'tt_um_t' });
+    expect(t.buildSim.mock.lastCall?.[0]).toMatchObject({
+      xml: 'gen-1',
+      topModule: 'tt_um_t',
+      input: { uiIn: 0x28, gamepad: { enabled: true, buttons: 0x100 } },
+    });
   });
 
   test('the compiling marker shows on load and hides when the queue goes idle', async () => {
