@@ -1,0 +1,10 @@
+project:
+  title: "Gamepad"
+  author: "Uri Shaked"
+  top_module: "tt_um_vga_example"
+  source_files:
+    - "project.v"
+    - "hvsync_generator.v"
+    - "gamepad_pmod.v"
+  language: "Verilog"
+  clock_hz: 25175000
