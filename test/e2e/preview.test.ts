@@ -104,7 +104,9 @@ suite('preview', () => {
     assert.strictEqual(good.ok, true, `messages: ${JSON.stringify(good.messages)}`);
   });
 
-  test('an older generation never lands after a newer one', async () => {
+  // A smoke test through the real bridge: it also passes with a plain single worker. The
+  // build-vs-result race is unit-tested in test/unit/orchestrator.test.ts ("ordering").
+  test('back-to-back loads settle on the newest generation', async () => {
     await ensurePreview();
     const before = (await compiledLog()).length;
     await postToWebview(await fixtureLoad(200));
