@@ -63,10 +63,12 @@ source of truth for them.
 export type HostToWebview =
   | { type: 'load'; generation: number; topModule: string;
       sources: Record<string, string>; dataFiles: Record<string, string> }
-  | { type: 'control'; action: 'reset' | 'pause' | 'resume' | 'screenshot' };
+  | { type: 'control'; action: 'reset' | 'pause' | 'resume' | 'screenshot' }
+  | { type: 'status'; message: string }; // banner message instead of a design; state → 'error'
 
 export type WebviewToHost =
   | { type: 'ready' }
+  | { type: 'showProblems' } // the banner's "Show in Problems" button
   | { type: 'compiled'; generation: number; ok: boolean;
       messages: VerilatorMessage[]; ms: number }
   | { type: 'runtimeError'; generation: number; message: string }
@@ -83,6 +85,11 @@ export interface VerilatorMessage {
 ```
 
 Paths are always project-relative, using `/`. The webview never sees URIs.
+
+`status` and `showProblems` were added in Task 11. The host sends `status` when it has no
+design to load (for example, discovery failed); the webview shows the message in the banner
+and reports the `error` state. The webview sends `showProblems` from the banner's "Show in
+Problems" button, and the host opens the Problems view.
 
 ### 2.3 Live-update flow
 

@@ -15,6 +15,7 @@ describe('isWebviewToHost', () => {
     expect(isWebviewToHost({ type: 'runtimeError', generation: 2, message: 'boom' })).toBe(true);
     expect(isWebviewToHost({ type: 'stats', fps: 60, state: 'running' })).toBe(true);
     expect(isWebviewToHost({ type: 'screenshot', png: 'iVBOR' })).toBe(true);
+    expect(isWebviewToHost({ type: 'showProblems' })).toBe(true);
   });
 
   test('rejects wrong field types and unknown types', () => {
@@ -24,6 +25,7 @@ describe('isWebviewToHost', () => {
     ).toBe(false);
     expect(isWebviewToHost({ type: 'stats', fps: 60, state: 'bogus' })).toBe(false);
     expect(isWebviewToHost({ type: 'load' })).toBe(false);
+    expect(isWebviewToHost({ type: 'status', message: 'x' })).toBe(false);
     expect(isWebviewToHost(null)).toBe(false);
     expect(isWebviewToHost('ready')).toBe(false);
   });
@@ -35,6 +37,7 @@ describe('isHostToWebview', () => {
       isHostToWebview({ type: 'load', generation: 1, topModule: 't', sources: {}, dataFiles: {} }),
     ).toBe(true);
     expect(isHostToWebview({ type: 'control', action: 'reset' })).toBe(true);
+    expect(isHostToWebview({ type: 'status', message: 'No Verilog sources found' })).toBe(true);
   });
 
   test('rejects wrong field types and unknown types', () => {
@@ -51,6 +54,9 @@ describe('isHostToWebview', () => {
       false,
     );
     expect(isHostToWebview({ type: 'control', action: 'explode' })).toBe(false);
+    expect(isHostToWebview({ type: 'status' })).toBe(false);
+    expect(isHostToWebview({ type: 'status', message: 42 })).toBe(false);
+    expect(isHostToWebview({ type: 'showProblems' })).toBe(false);
     expect(isHostToWebview({ type: 'ready' })).toBe(false);
     expect(isHostToWebview(undefined)).toBe(false);
   });

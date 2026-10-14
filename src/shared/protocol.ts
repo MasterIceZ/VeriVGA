@@ -9,10 +9,14 @@ export type HostToWebview =
       sources: Record<string, string>;
       dataFiles: Record<string, string>;
     }
-  | { type: 'control'; action: 'reset' | 'pause' | 'resume' | 'screenshot' };
+  | { type: 'control'; action: 'reset' | 'pause' | 'resume' | 'screenshot' }
+  // Shown in the banner instead of a design (e.g. no sources found); the state becomes `error`.
+  | { type: 'status'; message: string };
 
 export type WebviewToHost =
   | { type: 'ready' }
+  // The banner's "Show in Problems" button.
+  | { type: 'showProblems' }
   | {
       type: 'compiled';
       generation: number;
@@ -84,6 +88,8 @@ export function isHostToWebview(x: unknown): x is HostToWebview {
       );
     case 'control':
       return isControlAction(x.action);
+    case 'status':
+      return isString(x.message);
     default:
       return false;
   }
@@ -93,6 +99,7 @@ export function isWebviewToHost(x: unknown): x is WebviewToHost {
   if (!isObject(x)) return false;
   switch (x.type) {
     case 'ready':
+    case 'showProblems':
       return true;
     case 'compiled':
       return (

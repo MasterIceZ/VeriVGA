@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import type { LoadMessage, WebviewToHost } from '../shared/protocol';
+import { isHostToWebview, type LoadMessage, type WebviewToHost } from '../shared/protocol';
 import { PreviewPanel } from './PreviewPanel';
 
 type Compiled = Extract<WebviewToHost, { type: 'compiled' }>;
@@ -21,8 +21,11 @@ async function readSkeletonLoad(): Promise<LoadMessage> {
 }
 
 export function activate(context: vscode.ExtensionContext): void {
+  const testMode = context.extensionMode === vscode.ExtensionMode.Test;
   let panel: PreviewPanel | undefined;
   let lastCompiled: Compiled | undefined;
+  // Every `compiled`, in order, for `verivga._compiledLog`. Kept in Test mode only.
+  const compiledLog: Compiled[] = [];
 
   const onMessage = async (msg: WebviewToHost) => {
     switch (msg.type) {
@@ -35,6 +38,7 @@ export function activate(context: vscode.ExtensionContext): void {
         break;
       case 'compiled':
         lastCompiled = msg;
+        if (testMode) compiledLog.push(msg);
         break;
       case 'runtimeError':
         console.error(`[verivga] webview: ${msg.message}`);
@@ -57,9 +61,15 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
-  if (context.extensionMode === vscode.ExtensionMode.Test) {
+  if (testMode) {
     context.subscriptions.push(
       vscode.commands.registerCommand('verivga._lastCompiled', () => lastCompiled),
+      vscode.commands.registerCommand('verivga._compiledLog', () => [...compiledLog]),
+      vscode.commands.registerCommand('verivga._postToWebview', (msg: unknown) => {
+        if (!isHostToWebview(msg)) throw new Error('verivga._postToWebview: not a HostToWebview');
+        if (!panel) throw new Error('verivga._postToWebview: no preview panel is open');
+        panel.post(msg);
+      }),
     );
   }
 }
