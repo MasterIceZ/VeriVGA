@@ -1,6 +1,6 @@
 import { HDLModuleWASM } from '../sim/hdlwasm';
-import type { SyncPolarity } from '../sim/vga';
 import { parseVerilatorXml } from '../sim/verilator/compile';
+import type { SyncPolarity } from '../sim/vga';
 import type { VgaAdapter } from './adapters/types';
 
 export interface RunningSim {
@@ -11,8 +11,7 @@ export interface RunningSim {
 }
 
 export type BuildResult =
-  | { ok: true; sim: RunningSim }
-  | { ok: false; message: string; stack?: string };
+  { ok: true; sim: RunningSim } | { ok: false; message: string; stack?: string };
 
 export interface BuildOptions {
   xml: string;

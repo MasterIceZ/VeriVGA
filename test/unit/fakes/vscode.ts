@@ -11,7 +11,11 @@ function normalize(path: string): string {
 }
 
 export class Uri {
-  private constructor(readonly scheme: string, readonly authority: string, readonly path: string) {}
+  private constructor(
+    readonly scheme: string,
+    readonly authority: string,
+    readonly path: string,
+  ) {}
 
   static file(path: string): Uri {
     return new Uri('file', '', path);

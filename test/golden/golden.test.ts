@@ -2,8 +2,8 @@ import { readFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { PNG } from 'pngjs';
 import { fileURLToPath } from 'url';
-import { parse } from 'yaml';
 import { afterAll, beforeAll, expect, test, vi } from 'vitest';
+import { parse } from 'yaml';
 import { HDLModuleWASM } from '../../src/sim/hdlwasm';
 import { compileVerilator } from '../../src/sim/verilator/compile';
 import {

@@ -19,7 +19,10 @@ export class Controls {
   private readonly fps: HTMLElement;
   private readonly compiling: HTMLElement;
 
-  constructor(root: HTMLElement, private readonly h: ControlsHandlers) {
+  constructor(
+    root: HTMLElement,
+    private readonly h: ControlsHandlers,
+  ) {
     const doc = root.ownerDocument;
     const bar = doc.createElement('div');
     bar.className = 'controls';

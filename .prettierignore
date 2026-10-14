@@ -1,0 +1,22 @@
+dist/
+out/
+node_modules/
+*.vsix
+.vscode-test/
+.vscode-test-web/
+.vscode-test*/
+.superpowers/
+.claude/
+package-lock.json
+src/sim/verilator/verilator_bin.js
+examples/**/*.v
+test/fixtures/**/*.v
+LICENSE
+NOTICE
+# Ported from upstream (kept verbatim, see src/sim/UPSTREAM.md) and upstream-derived presets
+src/sim/
+examples/
+test/fixtures/
+# Planning docs and notes
+docs/
+CLAUDE.md

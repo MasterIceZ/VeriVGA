@@ -40,7 +40,9 @@ async function main() {
   async function render(sources: Record<string, string>, topModule: string) {
     const res = await compileVerilator({ topModule, sources, wasmBinary });
     if (!res.output) {
-      throw new Error(`Compilation failed: ${res.errors.map((e: { message: string }) => e.message).join('\n')}`);
+      throw new Error(
+        `Compilation failed: ${res.errors.map((e: { message: string }) => e.message).join('\n')}`,
+      );
     }
     const constpool = res.output.modules['@CONST-POOL@'] || res.output.modules['__Vconst'];
     const mod = new HDLModuleWASM(res.output.modules['TOP'], constpool);
