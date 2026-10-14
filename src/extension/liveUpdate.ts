@@ -71,6 +71,14 @@ export class LiveUpdate {
     await this.run(false);
   }
 
+  /**
+   * The webview no longer shows the last load (a `status` replaced it), so the next gather
+   * is sent even if its hash is unchanged.
+   */
+  forget(): void {
+    this.lastHash = undefined;
+  }
+
   dispose(): void {
     this.disposed = true;
     this.clearTimer();

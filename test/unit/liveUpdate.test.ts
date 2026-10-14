@@ -142,6 +142,15 @@ describe('LiveUpdate', () => {
     expect(sent).toHaveLength(2);
   });
 
+  test('forget: the next payload is sent even if unchanged, then hashing resumes', async () => {
+    const { lu, sent } = setup();
+    await lu.flush();
+    lu.forget(); // e.g. a `status` replaced the design on screen
+    await lu.flush();
+    await lu.flush();
+    expect(sent.map((m) => m.generation)).toEqual([1, 2]);
+  });
+
   test('gather returning null sends nothing and does not bump generation', async () => {
     const { lu, sent } = setup({ gather: () => Promise.resolve(null) });
     await lu.flush();

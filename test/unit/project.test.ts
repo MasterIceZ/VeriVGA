@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { discover } from '../../src/extension/project';
+import { discover, pickFolder } from '../../src/extension/project';
 import { createMemFs } from './fakes/memfs';
 import { Uri } from './fakes/vscode';
 
@@ -164,5 +164,27 @@ describe('discover', () => {
       fs,
     });
     expect(r).toMatchObject({ ok: false, reason: 'no-sources' });
+  });
+});
+
+describe('pickFolder', () => {
+  const ws1 = folder('/ws1');
+  const ws2 = folder('/ws2', 1);
+
+  test('the folder holding the active file', () => {
+    expect(pickFolder(Uri.file('/ws2/src/a.v') as never, [ws1, ws2] as never)).toBe(ws2);
+  });
+
+  test('one folder: an untitled, outside or missing active file falls back to it', () => {
+    const untitled = Uri.from({ scheme: 'untitled', path: 'Untitled-1' });
+    expect(pickFolder(untitled as never, [ws1] as never)).toBe(ws1);
+    expect(pickFolder(Uri.file('/elsewhere/a.v') as never, [ws1] as never)).toBe(ws1);
+    expect(pickFolder(undefined, [ws1] as never)).toBe(ws1);
+  });
+
+  test('no folder, or several and the active file is outside all of them → undefined', () => {
+    expect(pickFolder(Uri.file('/ws1/a.v') as never, [])).toBeUndefined();
+    expect(pickFolder(Uri.file('/elsewhere/a.v') as never, [ws1, ws2] as never)).toBeUndefined();
+    expect(pickFolder(undefined, [ws1, ws2] as never)).toBeUndefined();
   });
 });

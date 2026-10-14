@@ -1,5 +1,5 @@
-import { LineCounter, isMap, isScalar, isSeq, parseDocument } from 'yaml';
 import * as vscode from 'vscode';
+import { LineCounter, isMap, isScalar, isSeq, parseDocument } from 'yaml';
 import { detectTopModule } from '../shared/verilog';
 
 export type FsLike = Pick<vscode.FileSystem, 'readDirectory' | 'readFile' | 'stat'>;
@@ -23,16 +23,28 @@ export type DiscoverResult =
       problems?: { line: number; message: string }[];
     };
 
-const NO_FOLDER = 'Open a file inside a workspace folder';
+export const NO_FOLDER = 'Open a file inside a workspace folder';
 const SOURCE_EXT = /\.(v|sv|vh|svh)$/i;
 const DETECT_EXT = /\.(v|sv)$/i;
 
-function isInside(uri: vscode.Uri, folder: vscode.Uri): boolean {
+export function isInside(uri: vscode.Uri, folder: vscode.Uri): boolean {
   return (
     uri.scheme === folder.scheme &&
     uri.authority === folder.authority &&
     (uri.path === folder.path || uri.path.startsWith(folder.path.replace(/\/$/, '') + '/'))
   );
+}
+
+/**
+ * The folder holding the active file. With exactly one folder, an untitled, outside or
+ * missing active file falls back to it. Otherwise undefined (no usable folder).
+ */
+export function pickFolder(
+  activeUri: vscode.Uri | undefined,
+  folders: readonly vscode.WorkspaceFolder[],
+): vscode.WorkspaceFolder | undefined {
+  const folder = activeUri ? folders.find((f) => isInside(activeUri, f.uri)) : undefined;
+  return folder ?? (folders.length === 1 ? folders[0] : undefined);
 }
 
 const decoder = new TextDecoder('utf-8');
@@ -65,8 +77,7 @@ export async function discover(o: {
   fs: FsLike;
 }): Promise<DiscoverResult> {
   const { activeUri, folders, topModuleSetting, fs } = o;
-  let folder = activeUri ? folders.find((f) => isInside(activeUri, f.uri)) : undefined;
-  if (!folder && folders.length === 1) folder = folders[0];
+  const folder = pickFolder(activeUri, folders);
   if (!folder) return { ok: false, reason: 'no-folder', message: NO_FOLDER };
 
   const infoUri = vscode.Uri.joinPath(folder.uri, 'info.yaml');
