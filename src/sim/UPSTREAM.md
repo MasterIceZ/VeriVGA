@@ -28,8 +28,15 @@ files can be re-synced.
   location-less line becomes `{ type: 'error', file: '', line: 1, column: 1, message }`; a
   coded line keeps its `file:line:col` and code. The "Exiting due to …" summary is skipped,
   because Verilator also prints it for warnings-only runs. `ErrorParser.ts` is unchanged.
+- `src/sim/hdlwasm.ts`: `growMemory()` resizes the wasm memory after `genFuncs`. Verilator
+  turns a memory that is loaded by `$readmem` but never read into a local of the initial
+  block, and `genFunction` promotes array locals to globals after `genMemory` sized the
+  memory, so a large one ran past its end ("Invalid typed array length" on powercycle).
+  The size check moved into `getMemoryBlocks()`. Not fixed upstream as of `3e3c77e`.
 - `src/sim/vga-integration.spec.ts`: fixture paths (examples, golden PNG) and wasm path only.
-- `src/sim/hdlwasm-integration.spec.ts`, `src/sim/hdlruntime.spec.ts`: wasm path only.
+- `src/sim/hdlwasm-integration.spec.ts`: wasm path, plus the regression test "should fit a
+  memory that is loaded but never read" for the `hdlwasm.ts` fix above.
+- `src/sim/hdlruntime.spec.ts`: wasm path only.
 
 New (not upstream): `src/sim/verilator/messages.ts` and its spec,
 `src/sim/verilator/compile.spec.ts`, `src/shared/protocol.ts`.

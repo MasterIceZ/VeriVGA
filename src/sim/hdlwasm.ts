@@ -228,6 +228,7 @@ class Struct {
 
 export class HDLModuleWASM implements HDLModuleRunner {
   bmod!: binaryen.Module;
+  memblks!: number;
   instance!: WebAssembly.Instance;
 
   hdlmod: HDLModuleDef;
@@ -269,6 +270,7 @@ export class HDLModuleWASM implements HDLModuleRunner {
     this.genMemory();
     this.tempsStart = this.globals.len;
     this.genFuncs();
+    this.growMemory();
     this.validate();
   }
 
@@ -402,14 +404,29 @@ export class HDLModuleWASM implements HDLModuleRunner {
     this.bmod = new binaryen.Module();
     this.bmod.setFeatures(binaryen.Features.SignExt);
     this.genTypes();
+    this.memblks = this.getMemoryBlocks();
+    this.bmod.setMemory(this.memblks, this.memblks, MEMORY); // memory is in 64k chunks
+  }
+
+  // genFuncs promotes array locals (e.g. a memory only written by $readmem) to
+  // globals after genMemory sized the memory, so grow it to fit them. Calling
+  // setMemory without an export name replaces the memory and keeps its export.
+  private growMemory() {
+    var memblks = this.getMemoryBlocks();
+    if (memblks > this.memblks) {
+      this.memblks = memblks;
+      this.bmod.setMemory(memblks, memblks);
+    }
+  }
+
+  private getMemoryBlocks() {
     var membytes = this.globals.len;
     if (membytes > this.maxMemoryMB * 1024 * 1024)
       throw new HDLError(
         null,
         `cannot allocate ${membytes} bytes, limit is ${this.maxMemoryMB} MB`,
       );
-    var memblks = Math.ceil(membytes / 65536);
-    this.bmod.setMemory(memblks, memblks, MEMORY); // memory is in 64k chunks
+    return Math.ceil(membytes / 65536);
   }
 
   private genTypes() {

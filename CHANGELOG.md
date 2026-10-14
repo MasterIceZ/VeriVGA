@@ -4,6 +4,8 @@
 
 - Gamepad Pmod emulation (FR-12): a Gamepad toggle, an on-screen pad and the upstream key
   map. `Shift+R` always resets; `r` resets only while Gamepad is off.
+- Fix: a design that loads a large memory with `$readmemh`/`$readmemb` but never reads it
+  no longer fails with "Invalid typed array length".
 
 ## 0.0.1
 

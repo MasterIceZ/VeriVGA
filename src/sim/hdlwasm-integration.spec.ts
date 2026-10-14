@@ -836,6 +836,38 @@ describe('Full Verilog -> WASM Pipeline', () => {
       mod.dispose();
     });
 
+    test('should fit a memory that is loaded but never read', async () => {
+      // Regression: Verilator turns a memory used only by $readmem into a local of
+      // the initial block. Function locals that are arrays get promoted to globals
+      // after the wasm memory was sized, so a large one ran past the end of memory
+      // ("Invalid typed array length" on powercycle).
+      const verilog = `
+        module readmem_unread(
+          input wire [1:0] idx,
+          output wire [7:0] val
+        );
+          reg [7:0] used[0:3];
+          /* verilator lint_off UNUSED */
+          reg [7:0] unread[0:16383];
+          /* verilator lint_on UNUSED */
+          initial begin
+            $readmemh("../data/used.hex", used);
+            $readmemh("../data/unread.hex", unread);
+          end
+          assign val = used[idx];
+        endmodule
+      `;
+      const mod = await compileAndCreate('readmem_unread', { 'readmem_unread.v': verilog });
+      mod.getFileData = (fn: string) => (fn === '../data/used.hex' ? '11 22 33 44' : '55 66');
+      mod.powercycle();
+      for (const [i, expected] of [0x11, 0x22, 0x33, 0x44].entries()) {
+        mod.state.idx = i;
+        mod.eval();
+        expect(mod.state.val).toBe(expected);
+      }
+      mod.dispose();
+    });
+
     test('should reject a file with more values than the destination holds', async () => {
       const verilog = `
         module readmem_overflow(
