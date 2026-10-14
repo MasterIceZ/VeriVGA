@@ -5,6 +5,7 @@
   "version": "0.0.1",
   "publisher": "MasterIceZ",
   "license": "GPL-3.0-only",
+  "icon": "images/icon.png",
   "packageManager": "pnpm@11.3.0",
   "repository": {
     "type": "git",

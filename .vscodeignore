@@ -21,3 +21,4 @@ pnpm-workspace.yaml
 dist/test/**
 dist/web/test/**
 **/*.map
+images/icon.svg
