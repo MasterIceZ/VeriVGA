@@ -73,7 +73,7 @@ export class VerilatorDiagnostics {
     this.collection.set(
       uri,
       problems.map((p) => {
-        const line = Math.max(0, p.line - 1);
+        const line = Math.max(0, p.line); // problems[].line is already 0-based
         const d = new vscode.Diagnostic(
           new vscode.Range(line, 0, line, Number.MAX_SAFE_INTEGER),
           p.message,

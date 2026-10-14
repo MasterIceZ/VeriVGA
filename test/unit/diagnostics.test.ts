@@ -93,9 +93,18 @@ describe('VerilatorDiagnostics', () => {
     expect(got).toHaveLength(1);
     expect(got[0].source).toBe('verivga');
     expect(got[0].severity).toBe(vscode.DiagnosticSeverity.Error);
-    expect(got[0].range.start.line).toBe(3);
+    expect(got[0].range.start.line).toBe(4);
     d.setInfoYamlProblems(y, []);
     expect(coll.get(y) ?? []).toEqual([]);
+  });
+  test('info.yaml problem lines are 0-based: lines 0 and 1 stay distinct', () => {
+    const { coll, d } = setup();
+    const y = vscode.Uri.file('/w/info.yaml');
+    d.setInfoYamlProblems(y, [
+      { line: 0, message: 'a' },
+      { line: 1, message: 'b' },
+    ]);
+    expect(coll.get(y)!.map((x) => x.range.start.line)).toEqual([0, 1]);
   });
   test('clear removes both sets', () => {
     const { coll, d, uri, map } = setup();
