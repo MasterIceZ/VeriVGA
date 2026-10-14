@@ -13,11 +13,16 @@ body {
   font-size: var(--vscode-font-size);
 }
 
-/* 736×520 frame, scaled to fit the panel width with crisp pixels. */
+/*
+ * 736×520 frame, scaled to fit both the width and the height left under the controls and
+ * the banner. The canvas box takes all of that space; `object-fit: contain` keeps the
+ * aspect ratio and centers the frame in it, with crisp pixels.
+ */
 #screen {
+  flex: 1 1 0;
+  min-height: 0;
   width: 100%;
-  height: auto;
-  aspect-ratio: 736 / 520;
+  object-fit: contain;
   image-rendering: pixelated;
 }
 
