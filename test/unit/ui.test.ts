@@ -1,11 +1,17 @@
 // @vitest-environment jsdom
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { Banner } from '../../src/webview/ui/banner';
 import { Controls } from '../../src/webview/ui/controls';
 
 function key(k: string, init: KeyboardEventInit = {}) {
   document.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, ...init }));
 }
+
+let live: Controls[] = [];
+afterEach(() => {
+  live.forEach((c) => c.dispose());
+  live = [];
+});
 
 function mkControls() {
   document.body.innerHTML = '<div id="root"></div>';
@@ -17,6 +23,7 @@ function mkControls() {
   };
   const root = document.getElementById('root')!;
   const c = new Controls(root, h);
+  live.push(c);
   return { c, h, root };
 }
 
@@ -130,6 +137,24 @@ describe('Controls gamepad', () => {
     gp(root).click();
     key('r');
     expect(h.onReset).toHaveBeenCalledTimes(2);
+  });
+
+  test('a modifier pressed before keyup does not leave the button held', () => {
+    const { h, root } = mkControls();
+    gp(root).click();
+    key('a');
+    keyUp('a', { altKey: true });
+    expect(h.onGamepad).toHaveBeenLastCalledWith(true, 0);
+  });
+
+  test('dispose removes the key listeners', () => {
+    const { c, h, root } = mkControls();
+    gp(root).click();
+    c.dispose();
+    key('a');
+    key('3');
+    expect(h.onGamepad).toHaveBeenLastCalledWith(true, 0);
+    expect(h.onUiIn).not.toHaveBeenCalled();
   });
 
   test('digits 4-6 are ignored in gamepad mode, others still toggle', () => {

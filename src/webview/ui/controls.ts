@@ -82,10 +82,22 @@ export class Controls {
     bar.append(bits, this.gamepadBtn, reset, this.pauseBtn, this.fps, this.compiling);
     root.append(bar, this.pad.element);
 
-    doc.addEventListener('keydown', (e) => this.onKey(e));
-    doc.addEventListener('keyup', (e) => this.onKeyUp(e));
-    doc.defaultView?.addEventListener('blur', () => this.releaseAll());
+    const win = doc.defaultView;
+    const onKeyDown = (e: KeyboardEvent) => this.onKey(e);
+    const onKeyUp = (e: KeyboardEvent) => this.onKeyUp(e);
+    const onBlur = () => this.releaseAll();
+    doc.addEventListener('keydown', onKeyDown);
+    doc.addEventListener('keyup', onKeyUp);
+    win?.addEventListener('blur', onBlur);
+    this.dispose = () => {
+      doc.removeEventListener('keydown', onKeyDown);
+      doc.removeEventListener('keyup', onKeyUp);
+      win?.removeEventListener('blur', onBlur);
+    };
   }
+
+  /** Removes the document and window listeners. */
+  readonly dispose: () => void;
 
   setUiIn(v: number): void {
     this.value = v & 0xff;
@@ -159,7 +171,7 @@ export class Controls {
   }
 
   private onKeyUp(e: KeyboardEvent): void {
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    // No modifier filter: releasing `a` after pressing Alt must still release the button.
     const bit = this.padBit(e.key);
     if (bit !== undefined) this.hold(bit, false);
   }

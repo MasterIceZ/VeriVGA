@@ -19,8 +19,8 @@ Monaco.
   extension published first (FR-20 is v1, publishing is open question Q4).
 - Repo: `git@github.com:MasterIceZ/VeriVGA.git`. License: GPL-3.0-only.
 - Status: **MVP implemented** (FR-1 to FR-10, TinyTapeout only). Gamepad Pmod (FR-12)
-  is implemented. Not yet: audio, examples command, screenshot command, status bar (FR-11 to FR-15, v1). Update this file
-  when reality diverges.
+  is implemented. Not yet: audio, examples command, screenshot command, status bar (FR-11,
+  FR-13 to FR-15, v1). Update this file when reality diverges.
 
 ## Reference implementation (port, don't rewrite)
 
@@ -66,7 +66,7 @@ edit to a file the last load read
                                            (the old design renders until then)
 VerilatorDiagnostics, Output ◀──compiled── every outcome; `ok` only after setSim
   (a stale generation is dropped)          RenderLoop: rAF → adapter.renderFrame → canvas 736×520
-Output channel  ◀──runtimeError──────────  Controls: ui_in toggles, Reset, Pause, fps
+Output channel  ◀──runtimeError──────────  Controls: ui_in toggles, Gamepad Pmod, Reset, Pause, fps
 Problems view   ◀──showProblems──────────  Banner: errors, messages, no-sync hint
 (status bar, v1)◀──stats (≤ 2/s)─────────  state: loading | compiling | running | paused | error
                 ──status {message}───────▶ banner instead of a design (e.g. no sources)

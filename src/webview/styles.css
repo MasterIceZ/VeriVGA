@@ -58,6 +58,15 @@ body {
   background: var(--vscode-button-background);
 }
 
+.controls button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.controls button:disabled:hover {
+  background: var(--vscode-button-secondaryBackground);
+}
+
 .fps,
 .compiling {
   color: var(--vscode-descriptionForeground);
