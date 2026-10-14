@@ -3,7 +3,7 @@
   "displayName": "VeriVGA",
   "description": "Live VGA preview of TinyTapeout Verilog designs.",
   "version": "0.0.1",
-  "publisher": "mastericez",
+  "publisher": "MasterIceZ",
   "license": "GPL-3.0-only",
   "packageManager": "pnpm@11.3.0",
   "repository": {
