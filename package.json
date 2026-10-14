@@ -41,11 +41,13 @@
       "title": "VeriVGA",
       "properties": {
         "verivga.liveUpdate": {
+          "scope": "resource",
           "type": "boolean",
           "default": true,
           "description": "Re-render the preview automatically while typing."
         },
         "verivga.liveDelay": {
+          "scope": "resource",
           "type": "number",
           "default": 300,
           "minimum": 0,
@@ -53,6 +55,7 @@
           "description": "Milliseconds to wait after the last edit before recompiling."
         },
         "verivga.topModule": {
+          "scope": "resource",
           "type": "string",
           "default": "",
           "description": "Name of the top module. Empty means auto-detect."
