@@ -118,29 +118,31 @@ src/sim/         ported simulator + verilator/ (GPL-3.0, keep headers); ported s
 examples/        eight TT-layout presets
 test/unit/       vitest (fakes/: vscode, memfs)   test/golden/  frame-0 PNGs + generate.ts
 test/e2e/        preview.test.ts (desktop + web), latency.test.ts (desktop); web/ (runner, assert)
-test/fixtures/   stripes (the E2E workspace)      test/bench/   M0 timing (not in npm test)
+test/fixtures/   stripes (the E2E workspace)      test/bench/   M0 timing (not in pnpm test)
 docs/            requirements.md, superpowers/{specs,plans,notes}/
 ```
 
 ## Commands
 
+pnpm only (version pinned by `packageManager` in package.json; `corepack enable` picks it up).
+
 ```bash
-npm install
-npm run build          # esbuild, from one source (browser bundles target es2022, desktop node18):
+pnpm install           # pnpm-workspace.yaml allowlists the 3 install scripts we need
+pnpm build             # esbuild, from one source (browser bundles target es2022, desktop node18):
                        #   dist/extension.js      (cjs, node)      ← package.json "main"
                        #   dist/web/extension.js  (cjs, browser)   ← package.json "browser"
                        #   dist/webview.js        (esm) + dist/compileWorker.js (iife)
                        #   + dist/verilator_bin.wasm, dist/webview.css, and the E2E bundles
-npm run watch          # rebuild on change (for an Extension Development Host)
-npm run open:web       # local browser VS Code with the extension and the stripes fixture
-npm test               # vitest: unit, ported specs, golden frames
-npm run test:e2e       # @vscode/test-cli + test-electron, desktop, incl. the latency gate
-npm run test:web       # @vscode/test-web, headless Chromium, --quality=stable
-npm run typecheck      # tsc --noEmit
-npm run lint           # eslint (includes the no-Node-built-ins rule for host code)
-npm run format         # prettier --write .     (format:check = prettier --check .)
-npm run package        # vsce package → .vsix; vscode:prepublish runs a production build
-                       # (minified, no source maps, no E2E bundles)
+pnpm watch             # rebuild on change (for an Extension Development Host)
+pnpm open:web          # local browser VS Code with the extension and the stripes fixture
+pnpm test              # vitest: unit, ported specs, golden frames
+pnpm test:e2e          # @vscode/test-cli + test-electron, desktop, incl. the latency gate
+pnpm test:web          # @vscode/test-web, headless Chromium, --quality=stable
+pnpm typecheck         # tsc --noEmit
+pnpm lint              # eslint (includes the no-Node-built-ins rule for host code)
+pnpm format            # prettier --write .     (format:check = prettier --check .)
+pnpm package           # vsce package --no-dependencies → .vsix; vscode:prepublish runs a
+                       # production build (minified, no source maps, no E2E bundles)
 ```
 
 Test-only commands, registered only when `extensionMode === Test`: `verivga._lastCompiled`,
@@ -236,10 +238,16 @@ a base64 PNG). They act on the most recently revealed preview.
 - The compile worker is a classic (iife) worker started from a Blob URL: a webview can't
   start a worker from its resource URI, and Emscripten only detects a worker when
   `importScripts` exists.
-- Formatting: run `npm run format` / `npm run format:check` (or
+- Formatting: run `pnpm format` / `pnpm format:check` (or
   `node node_modules/prettier/bin/prettier.cjs`). Never `npx prettier`: a shell hook (rtk)
   may rewrite it to a global prettier 2, which can't load the v3 organize-imports plugin
   and corrupts generics.
+- pnpm is strict: a tool or import must be a declared dependency, not something npm
+  happened to hoist. `vite-node` (golden/bench scripts) and `playwright` (browser install)
+  are declared for that reason, pinned to the versions vitest and `@vscode/test-web` use.
+- Packaging uses `vsce package --no-dependencies`: vsce's dependency walk assumes npm's
+  `node_modules` layout, and esbuild already bundles every runtime dependency.
+- Regenerating golden frames still runs `npm ci` inside the upstream clone (its lockfile).
 - Desktop E2E opens a real VS Code window. Its user-data dir lives in the OS temp dir
   (`.vscode-test.mjs`) because macOS caps the IPC socket path at 103 characters.
 - `AudioContext` needs a user gesture. `audioWorklet.addModule()` needs an allowed

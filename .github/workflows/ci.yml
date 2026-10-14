@@ -10,21 +10,23 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      # Version comes from the "packageManager" field in package.json.
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npx prettier --check .
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
       - name: Desktop E2E
-        run: xvfb-run -a npm run test:e2e
-      - run: npx playwright install --with-deps chromium
+        run: xvfb-run -a pnpm test:e2e
+      - run: pnpm exec playwright install --with-deps chromium
       - name: Web E2E
-        run: npm run test:web
-      - run: npm run package
+        run: pnpm test:web
+      - run: pnpm package
       - name: VSIX must be under 25 MB
         run: test $(stat -c%s *.vsix) -lt 26214400

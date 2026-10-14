@@ -1,5 +1,5 @@
 // M0 spike: per-phase timing of the compile → first frame path on the stripes example, in
-// Node. Not part of `npm test`. Run with: npx vite-node test/bench/m0-timing.ts [runs]
+// Node. Not part of `pnpm test`. Run with: pnpm exec vite-node test/bench/m0-timing.ts [runs]
 
 import { readFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';

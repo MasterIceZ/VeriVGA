@@ -7,7 +7,7 @@ node_modules/
 .vscode-test*/
 .superpowers/
 .claude/
-package-lock.json
+pnpm-lock.yaml
 src/sim/verilator/verilator_bin.js
 examples/**/*.v
 test/fixtures/**/*.v

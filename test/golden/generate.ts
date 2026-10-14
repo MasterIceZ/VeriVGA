@@ -1,7 +1,7 @@
 /**
  * Generates golden frames from UNMODIFIED upstream vga-playground code.
  *
- *   npx vite-node test/golden/generate.ts -- "$UPSTREAM"
+ *   pnpm exec vite-node test/golden/generate.ts -- "$UPSTREAM"
  *
  * Imports compile/sim/vga from "$UPSTREAM/src" (not from our port), renders frame 0 of each
  * preset twice, fails if the renders differ, then writes test/golden/<id>.png and

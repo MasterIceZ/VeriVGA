@@ -5,6 +5,7 @@
   "version": "0.0.1",
   "publisher": "mastericez",
   "license": "GPL-3.0-only",
+  "packageManager": "pnpm@11.3.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/MasterIceZ/VeriVGA"
@@ -74,7 +75,7 @@
     "test:web": "vscode-test-web --browserType=chromium --quality=stable --headless --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/index.js test/fixtures/stripes",
     "open:web": "vscode-test-web --browserType=chromium --quality=stable --extensionDevelopmentPath=. test/fixtures/stripes",
     "vscode:prepublish": "node esbuild.mjs --production",
-    "package": "vsce package",
+    "package": "vsce package --no-dependencies",
     "format:check": "prettier --check ."
   },
   "devDependencies": {
@@ -90,11 +91,13 @@
     "eslint": "^9.39.5",
     "jsdom": "^30.1.2",
     "mocha": "^11.8.0",
+    "playwright": "1.64.0",
     "pngjs": "^7.0.0",
     "prettier": "^3.9.10",
     "prettier-plugin-organize-imports": "^4.3.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.71.2",
+    "vite-node": "3.2.4",
     "vitest": "^3.2.7"
   },
   "dependencies": {
