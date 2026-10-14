@@ -89,7 +89,7 @@ besides the extension.
 ### 3.2 v1 (should have)
 
 - **FR-11 Audio Pmod** with a toggle button. WebAudio needs a user gesture before it plays.
-- **FR-12 Gamepad Pmod** emulation, with on-screen buttons and the upstream key mapping.
+- **FR-12 Gamepad Pmod** emulation, with on-screen buttons and the upstream key mapping. Done (2026-10-14).
 - **FR-13 Examples.** `VeriVGA: New Project from Example…` copies one of the 8 presets,
   plus `info.yaml` and their LICENSE files, into a chosen folder.
 - **FR-14 Screenshot.** `VeriVGA: Save Frame as PNG`.

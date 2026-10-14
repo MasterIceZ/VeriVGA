@@ -18,8 +18,8 @@ Monaco.
   and tested in a browser host (`@vscode/test-web`); vscode.dev and github.dev need the
   extension published first (FR-20 is v1, publishing is open question Q4).
 - Repo: `git@github.com:MasterIceZ/VeriVGA.git`. License: GPL-3.0-only.
-- Status: **MVP implemented** (FR-1 to FR-10, TinyTapeout only). Not yet: audio, gamepad,
-  examples command, screenshot command, status bar (FR-11 to FR-15, v1). Update this file
+- Status: **MVP implemented** (FR-1 to FR-10, TinyTapeout only). Gamepad Pmod (FR-12)
+  is implemented. Not yet: audio, examples command, screenshot command, status bar (FR-11 to FR-15, v1). Update this file
   when reality diverges.
 
 ## Reference implementation (port, don't rewrite)
@@ -35,7 +35,7 @@ vendor the whole repo. Mapping:
 | `github/loadProject.ts` (`extractIncludePaths`, `extractReadmemPaths`) | `src/shared/verilogRefs.ts` | Verbatim |
 | `src/examples/*` | `examples/<id>/{info.yaml,src/*.v,LICENSE.txt}` | Converted to TT layout |
 | `AudioEngine.ts`, `AudioPlayer.ts`, `public/resampler.js` (v1) | `src/webview/audio/` | Adapt URL loading |
-| `InputController.ts` (gamepad, v1) | `src/webview/` | Adapt to the panel DOM |
+| `InputController.ts` (gamepad) | `src/webview/adapters/gamepadPmod.ts`, `ui/gamepad.ts` | Adapted to the panel DOM |
 | `InputController.ts` (keys), `FPSCounter.ts` | `src/webview/ui/controls.ts`, `renderLoop.ts` | Rewritten for the panel |
 | `index.ts`, `ui/*`, `github/*` (rest), `exportProject.ts`, Monaco | — | Not ported |
 
@@ -87,7 +87,7 @@ Test mode only: verivga._screenshot
   anything older than the newest request gets dropped. Results are applied strictly in
   generation order. The old simulation keeps rendering until the new one is ready, so
   there's never a black flicker.
-- `ui_in` and the user's pause carry over across recompiles. Only the design is reset.
+- `ui_in`, the gamepad mode (with held buttons) and the user's pause carry over across recompiles. Only the design is reset.
 
 ## Layout
 
@@ -110,8 +110,8 @@ src/webview/     main.ts           composition root: DOM, compiler boot (WASM + 
                  workerProtocol.ts main ↔ worker messages (may carry a WebAssembly.Module)
                  simHost.ts        buildSim: XML → HDLModuleWASM, validated and reset
                  renderLoop.ts     rAF loop, frame-boundary swap, fps, no-sync, runtime errors
-                 adapters/         types.ts (VgaAdapter), tinytapeout.ts: the only place pin layouts live
-                 ui/               controls.ts (ui_in, Reset, Pause, fps), banner.ts
+                 adapters/         types.ts (VgaAdapter, InputState), tinytapeout.ts, gamepadPmod.ts: the only place pin layouts live
+                 ui/               controls.ts (ui_in, Gamepad, Reset, Pause, fps), gamepad.ts (on-screen pad), banner.ts
                  styles.css        copied to dist/webview.css
 src/shared/      protocol.ts (ALL host↔webview message types and guards), verilog.ts, verilogRefs.ts
 src/sim/         ported simulator + verilator/ (GPL-3.0, keep headers); ported specs live here too
@@ -164,7 +164,7 @@ a base64 PNG). They act on the most recently revealed preview.
 - Reset sequence: `powercycle()`, `ena=1`, `rst_n=0`, keep `ui_in`, `tick2(10)`, `rst_n=1`.
 - Audio Pmod (v1): sample `(uio_out & uio_oe) >> 7` every tick, average to 192 kHz, apply
   a 20 kHz box low-pass.
-- Gamepad Pmod (v1): drives `ui_in[4]`=latch, `[5]`=clk, `[6]`=data, as a 24-bit serial
+- Gamepad Pmod: drives `ui_in[4]`=latch, `[5]`=clk, `[6]`=data, as a 24-bit serial
   frame stepped once per scanline (see `updateGamepadPmod`).
 - Top-module detection: first `module tt_um_*` (with `project.v` first), else the first
   module in `project.v`, else `tt_um_vga_example`. `.vh`/`.svh` files are include-only

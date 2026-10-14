@@ -29,7 +29,14 @@ The bar above the frame drives the design while it runs:
 
 - **`ui_in` toggles:** eight buttons, `0` to `7`, one per `ui_in` bit. While the preview
   panel has focus, the keys `0` to `7` toggle the same bits.
-- **Reset:** resets the design, keeping the `ui_in` values. The key `R` does the same.
+- **Gamepad:** emulates the Tiny Tapeout Gamepad Pmod. While on, it drives `ui_in[4]` to
+  `ui_in[6]` (latch, clock, data) once per scanline, so those three toggles are disabled
+  (the others keep working), and an on-screen pad appears with D-pad, Sel/Start, Y/X/B/A
+  and L/R. Hold a button with the mouse or touch, or with the keys (the panel needs
+  focus): arrows, `a`, `b`, `x`, `y`, `s` (Select), `t` (Start), `l`, `r`. Turning it off
+  releases every button. The mode and held buttons carry over across recompiles.
+- **Reset:** resets the design, keeping the `ui_in` values. `Shift+R` always resets; plain
+  `r` does too, unless Gamepad is on (then it is the R shoulder button).
 - **Pause / Resume:** stops and restarts the simulation. A paused preview stays paused
   across recompiles.
 

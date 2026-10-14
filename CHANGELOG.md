@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Gamepad Pmod emulation (FR-12): a Gamepad toggle, an on-screen pad and the upstream key
+  map. `Shift+R` always resets; `r` resets only while Gamepad is off.
+
 ## 0.0.1
 
 First MVP.
