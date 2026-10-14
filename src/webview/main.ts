@@ -66,6 +66,10 @@ const orchestrator = new Orchestrator({
   controls,
   adapter,
   buildSim,
+  capturePng: () => {
+    const url = canvas.toDataURL('image/png'); // data:image/png;base64,<png>
+    return url.slice(url.indexOf(',') + 1);
+  },
   startCompiler,
 });
 

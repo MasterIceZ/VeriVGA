@@ -118,6 +118,28 @@ function insertSyntaxError(text: string): { text: string; line: number } {
   };
 }
 
+/**
+ * The preview canvas as a base64 PNG, through `verivga._screenshot` (Test mode). Strings are
+ * compared as-is: equal PNGs mean equal frames, so no decoding is needed.
+ */
+async function screenshot(): Promise<string> {
+  const png = await vscode.commands.executeCommand<unknown>('verivga._screenshot');
+  assert.strictEqual(typeof png, 'string', `screenshot: ${String(png)}`);
+  const text = png as string;
+  assert.ok(text.length > 0, 'the screenshot is empty');
+  assert.ok(!text.startsWith('data:'), 'the screenshot keeps its data: prefix');
+  return text;
+}
+
+/** Swaps the R and G expressions of the stripes design: same timing, different colors. */
+function swapRG(text: string): string {
+  const swapped = text
+    .replace('assign R = video_active ? {moving_x[5]', 'assign R = video_active ? {moving_x[6]')
+    .replace('assign G = video_active ? {moving_x[6]', 'assign G = video_active ? {moving_x[5]');
+  assert.notStrictEqual(swapped, text, 'the stripes fixture no longer has the R/G lines');
+  return swapped;
+}
+
 const verilatorDiagnostics = (uri: vscode.Uri) =>
   vscode.languages.getDiagnostics(uri).filter((d) => d.source === 'verilator');
 
@@ -160,6 +182,35 @@ suite('preview', () => {
       c.messages.filter((m) => m.severity === 'error'),
       [],
     );
+  });
+
+  // Done-when #1: `compiled ok` comes before any frame is drawn, so look at the canvas itself.
+  test('the canvas animates, and an unsaved color edit changes the frame', async () => {
+    await ensurePreview();
+    await waitForCompiled((c) => c.ok);
+    const first = await screenshot();
+    await sleep(300);
+    const second = await screenshot();
+    // Stripes scrolls every frame, so equal frames 300 ms apart mean nothing is drawing.
+    assert.notStrictEqual(second, first, 'two frames 300 ms apart are identical');
+
+    const before = await lastHostGeneration();
+    const doc = await editText(projectV(), swapRG);
+    let edited: Compiled;
+    try {
+      edited = await waitForHostCompiled(before, () => true);
+      assert.strictEqual(edited.ok, true, `messages: ${JSON.stringify(edited.messages)}`);
+      // `compiled` is posted before the swap; the new design is drawn from the next frame.
+      await sleep(100);
+      const recolored = await screenshot();
+      assert.notStrictEqual(recolored, first, 'the edited frame equals a pre-edit frame');
+      assert.notStrictEqual(recolored, second, 'the edited frame equals a pre-edit frame');
+      await sleep(300);
+      assert.notStrictEqual(await screenshot(), recolored, 'the edited design stopped drawing');
+    } finally {
+      await revert(doc);
+    }
+    assert.strictEqual((await waitForHostCompiled(edited.generation, () => true)).ok, true);
   });
 
   // Review Focus 5: a top module without the TinyTapeout ports is reported, never a crash.

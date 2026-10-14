@@ -22,3 +22,13 @@ export function deepStrictEqual<T>(
   const e = JSON.stringify(expected);
   if (a !== e) throw new Error(message ?? `expected ${e}, got ${a}`);
 }
+
+export function notStrictEqual(actual: unknown, expected: unknown, message?: string): void {
+  if (Object.is(actual, expected)) {
+    throw new Error(message ?? `expected a value other than ${String(expected)}`);
+  }
+}
+
+export function ok(value: unknown, message?: string): asserts value {
+  if (!value) throw new Error(message ?? `expected a truthy value, got ${String(value)}`);
+}

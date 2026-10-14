@@ -10,6 +10,7 @@ import { SourceReader } from './sources';
 
 type Compiled = Extract<WebviewToHost, { type: 'compiled' }>;
 type DiscoverFailure = Extract<DiscoverResult, { ok: false }>;
+type ScreenshotWaiter = { resolve(png: string): void; reject(err: Error): void };
 
 /** The text of the open document for `uri`, if any: unsaved buffers win. */
 function openDocumentText(uri: vscode.Uri): string | undefined {
@@ -41,6 +42,8 @@ export class PreviewSession {
   private lastStatus: string | undefined;
   private readonly warnedReads = new Set<string>();
   private compiled: Compiled | undefined;
+  /** Callers of `screenshot()` waiting for the webview's next `screenshot` message. */
+  private readonly screenshotWaiters = new Set<ScreenshotWaiter>();
   private disposed = false;
 
   readonly onDidDispose = this.disposeEmitter.event;
@@ -139,9 +142,36 @@ export class PreviewSession {
     this.panel.post(msg);
   }
 
+  /**
+   * Asks the webview for its canvas and resolves with the next `screenshot` it posts, as a
+   * base64 PNG (`verivga._screenshot`, Test mode). Rejects after `timeoutMs` or on dispose.
+   */
+  screenshot(timeoutMs = 5000): Promise<string> {
+    if (this.disposed) return Promise.reject(new Error('the preview panel is closed'));
+    return new Promise<string>((resolve, reject) => {
+      const waiter: ScreenshotWaiter = {
+        resolve: (png: string) => {
+          clearTimeout(timer);
+          resolve(png);
+        },
+        reject: (err: Error) => {
+          clearTimeout(timer);
+          reject(err);
+        },
+      };
+      const timer = setTimeout(() => {
+        this.screenshotWaiters.delete(waiter);
+        reject(new Error(`no screenshot from the webview within ${timeoutMs} ms`));
+      }, timeoutMs);
+      this.screenshotWaiters.add(waiter);
+      this.panel.post({ type: 'control', action: 'screenshot' });
+    });
+  }
+
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.settleScreenshots((w) => w.reject(new Error('the preview panel was closed')));
     this.live.dispose();
     this.diagnostics.dispose();
     vscode.Disposable.from(...this.subscriptions).dispose();
@@ -166,7 +196,16 @@ export class PreviewSession {
       case 'showProblems':
         void vscode.commands.executeCommand('workbench.actions.view.problems');
         break;
+      case 'screenshot':
+        this.settleScreenshots((w) => w.resolve(msg.png));
+        break;
     }
+  }
+
+  private settleScreenshots(settle: (w: ScreenshotWaiter) => void): void {
+    const waiters = [...this.screenshotWaiters];
+    this.screenshotWaiters.clear();
+    waiters.forEach(settle);
   }
 
   private onCompiled(msg: Compiled): void {

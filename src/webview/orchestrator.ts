@@ -34,6 +34,8 @@ export interface OrchestratorDeps {
   controls: ControlsLike;
   adapter: VgaAdapter;
   buildSim(o: BuildOptions): Promise<BuildResult>;
+  /** The canvas as a base64 PNG (no `data:` prefix), for `control: screenshot`. */
+  capturePng(): string;
   /** Loads the compiler (Verilator WASM and worker). Rejecting shows "Couldn't load the compiler". */
   startCompiler(events: CompilerEvents): Promise<Compiler>;
   /** Milliseconds; defaults to `performance.now()`. */
@@ -130,7 +132,11 @@ export class Orchestrator {
         if (msg.action === 'reset') this.reset();
         else if (msg.action === 'pause') this.setPaused(true);
         else if (msg.action === 'resume') this.setPaused(false);
-        // 'screenshot' is v1 (FR-14).
+        else if (msg.action === 'screenshot') {
+          // On request only, so frames never stream over postMessage. The Test-mode frame
+          // probe (`verivga._screenshot`) uses it now; FR-14's command (v1) will too.
+          this.d.post({ type: 'screenshot', png: this.d.capturePng() });
+        }
         break;
       case 'status':
         this.showMessage(msg.message);

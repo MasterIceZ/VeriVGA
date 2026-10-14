@@ -58,6 +58,12 @@ export function activate(context: vscode.ExtensionContext): void {
         if (!session) throw new Error('verivga._postToWebview: no preview panel is open');
         session.post(msg);
       }),
+      // The canvas as a base64 PNG, so E2E can check that frames are drawn and change.
+      vscode.commands.registerCommand('verivga._screenshot', () => {
+        const session = current();
+        if (!session) throw new Error('verivga._screenshot: no preview panel is open');
+        return session.screenshot();
+      }),
     );
   }
 }

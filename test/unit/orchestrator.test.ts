@@ -123,6 +123,7 @@ async function setup() {
     sim: fakeSim(o.xml),
   }));
   const log = { log: vi.fn(), error: vi.fn() };
+  const capturePng = vi.fn(() => 'iVBORw0KGgo=');
   const orchestrator = new Orchestrator({
     post: (msg) => {
       posted.push(msg);
@@ -133,6 +134,7 @@ async function setup() {
     controls,
     adapter: {} as VgaAdapter,
     buildSim,
+    capturePng,
     startCompiler: async (events) =>
       new CompilerHost({
         ...events,
@@ -154,6 +156,7 @@ async function setup() {
     banner,
     controls,
     buildSim,
+    capturePng,
     workers,
     worker: () => workers[workers.length - 1],
     posted,
@@ -208,6 +211,7 @@ describe('boot', () => {
       controls: { setPaused: vi.fn(), setFps: vi.fn(), setCompiling: vi.fn() },
       adapter: {} as VgaAdapter,
       buildSim: vi.fn(),
+      capturePng: vi.fn(() => ''),
       startCompiler: async (events) => {
         if (fail) throw new Error('GET verilator_bin.wasm: 503');
         return new CompilerHost({
@@ -606,6 +610,29 @@ describe('ordering', () => {
     await flush();
     expect(t.compiled().map((c) => c.generation)).toEqual([2]);
     expect(t.buildSim).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('host controls', () => {
+  test('control: screenshot posts the canvas as a base64 PNG, and nothing else', async () => {
+    const t = await setup();
+    await compileOk(t, 1);
+    t.posted.length = 0;
+    t.orchestrator.onHostMessage({ type: 'control', action: 'screenshot' });
+    expect(t.capturePng).toHaveBeenCalledTimes(1);
+    expect(t.posted).toEqual([{ type: 'screenshot', png: 'iVBORw0KGgo=' }]);
+    expect(t.loop.pause).not.toHaveBeenCalled();
+    expect(t.loop.reset).not.toHaveBeenCalled();
+  });
+
+  test('frames are captured only on request', async () => {
+    const t = await setup();
+    await compileOk(t, 1);
+    t.orchestrator.onHostMessage({ type: 'control', action: 'pause' });
+    t.orchestrator.onHostMessage({ type: 'control', action: 'resume' });
+    t.orchestrator.onHostMessage({ type: 'control', action: 'reset' });
+    expect(t.capturePng).not.toHaveBeenCalled();
+    expect(t.posted.some((m) => m.type === 'screenshot')).toBe(false);
   });
 });
 

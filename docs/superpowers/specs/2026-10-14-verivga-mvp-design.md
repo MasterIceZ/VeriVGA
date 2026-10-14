@@ -18,7 +18,8 @@ The MVP also does three things now because they cost more to retrofit:
 **Not in the MVP:** audio, gamepad, examples command, screenshot, status bar (FR-11 to
 FR-15); full vscode.dev parity (FR-20 is v1); generic modules (v2).
 
-The `screenshot` protocol message is defined now, but nothing uses it until FR-14.
+The `screenshot` protocol message is defined now. Until FR-14 only the Test-mode frame probe
+uses it (`verivga._screenshot`, §4).
 
 **Done when:**
 1. Opening a folder that contains the stripes example and running `VeriVGA: Open Preview`
@@ -141,11 +142,13 @@ a "Show in Problems" action.
 | Unit (webview) | vitest | `compileQueue` (latest-wins, drop on pending, watchdog), adapter decode/validate |
 | Ported upstream | vitest | `ErrorParser.spec`, `verilog.spec`, `hdlwasm*.spec`, `readmem.spec`, `vga-integration.spec`. These must pass unchanged |
 | Golden frames | vitest + pngjs | Frame 0 of all 8 presets, byte-identical. Stripes uses upstream's PNG. The other 7 are generated **once** from the unmodified upstream at `3e3c77e` by `test/golden/generate.ts`, which records the commit |
-| E2E desktop | `@vscode/test-electron` | Fixture workspace (stripes): open the preview → `compiled ok`; edit without saving → new `generation` compiled; add a syntax error → diagnostic appears; fix → it clears |
+| E2E desktop | `@vscode/test-electron` | Fixture workspace (stripes): open the preview → `compiled ok`; two screenshots 300 ms apart differ (frames are drawn); edit without saving → new `generation` compiled and a different frame; add a syntax error → diagnostic appears; fix → it clears |
 | E2E web | `@vscode/test-web` (Chromium) | The same smoke scenario on the virtual FS |
 | Latency | E2E desktop | Log keystroke→`compiled ok` ms per run. CI fails if the median exceeds `liveDelay` + 700 ms |
 
-E2E tests observe the webview through a test-only command, `verivga._lastCompiled`. It is
+E2E tests observe the webview through test-only commands: `verivga._lastCompiled`,
+`verivga._compiledLog`, `verivga._postToWebview` and `verivga._screenshot` (posts
+`control: screenshot` and resolves with the next `screenshot` PNG, base64). They are
 registered only when `extensionMode === Test`.
 
 ## 5. Port details
