@@ -48,3 +48,66 @@ export enum FileType {
   Directory = 2,
   SymbolicLink = 64,
 }
+
+export class Position {
+  constructor(
+    readonly line: number,
+    readonly character: number,
+  ) {}
+}
+
+export class Range {
+  readonly start: Position;
+  readonly end: Position;
+  constructor(startLine: number, startCharacter: number, endLine: number, endCharacter: number) {
+    this.start = new Position(startLine, startCharacter);
+    this.end = new Position(endLine, endCharacter);
+  }
+}
+
+export enum DiagnosticSeverity {
+  Error = 0,
+  Warning = 1,
+  Information = 2,
+  Hint = 3,
+}
+
+export class Diagnostic {
+  source?: string;
+  code?: string | number;
+  constructor(
+    public range: Range,
+    public message: string,
+    public severity: DiagnosticSeverity = DiagnosticSeverity.Error,
+  ) {}
+}
+
+export class DiagnosticCollection {
+  private readonly map = new Map<string, { uri: Uri; diagnostics: readonly Diagnostic[] }>();
+  disposed = false;
+  constructor(readonly name = 'fake') {}
+
+  set(uri: Uri, diagnostics: readonly Diagnostic[] | undefined): void {
+    if (diagnostics === undefined) this.map.delete(uri.toString());
+    else this.map.set(uri.toString(), { uri, diagnostics: [...diagnostics] });
+  }
+  delete(uri: Uri): void {
+    this.map.delete(uri.toString());
+  }
+  clear(): void {
+    this.map.clear();
+  }
+  get(uri: Uri): readonly Diagnostic[] | undefined {
+    return this.map.get(uri.toString())?.diagnostics;
+  }
+  has(uri: Uri): boolean {
+    return this.map.has(uri.toString());
+  }
+  forEach(cb: (uri: Uri, diagnostics: readonly Diagnostic[], collection: this) => void): void {
+    for (const { uri, diagnostics } of this.map.values()) cb(uri, diagnostics, this);
+  }
+  dispose(): void {
+    this.map.clear();
+    this.disposed = true;
+  }
+}
