@@ -9,16 +9,18 @@ its VGA output live in a webview panel. It is a port of
 Monaco.
 
 - Requirements, scope and open decisions: `docs/requirements.md`. Read it before
-  starting a feature.
+  starting a feature. The MVP design is `docs/superpowers/specs/2026-10-14-verivga-mvp-design.md`.
 - Scope: **TinyTapeout interface first** (MVP and v1). Generic VGA modules with a
   configurable pin mapping come in v2 (FR-16 to FR-19).
-- The headline feature is **real-time preview**: the frame re-renders about 300 ms
-  after the user stops typing, with no save needed (FR-4).
-- Runs on **desktop VS Code and in the browser** (vscode.dev, github.dev) from one
-  codebase (FR-20).
+- The headline feature is **real-time preview**: the frame re-renders `verivga.liveDelay`
+  (300 ms by default) after the user stops typing, with no save needed (FR-4).
+- One codebase for **desktop VS Code and the browser** (FR-20). The web bundle is built
+  and tested in a browser host (`@vscode/test-web`); vscode.dev and github.dev need the
+  extension published first (FR-20 is v1, publishing is open question Q4).
 - Repo: `git@github.com:MasterIceZ/VeriVGA.git`. License: GPL-3.0-only.
-- Status: **pre-scaffold**. The layout and scripts below are the plan. Update this
-  file when reality diverges.
+- Status: **MVP implemented** (FR-1 to FR-10, TinyTapeout only). Not yet: audio, gamepad,
+  examples command, screenshot command, status bar (FR-11 to FR-15, v1). Update this file
+  when reality diverges.
 
 ## Reference implementation (port, don't rewrite)
 
@@ -27,77 +29,123 @@ vendor the whole repo. Mapping:
 
 | Upstream | VeriVGA | Change policy |
 |---|---|---|
-| `src/sim/*` (vxmlparser, hdlwasm, hdltypes, hdlruntime, readmem, xml, util, emu) | `src/sim/` | **Copy verbatim.** Adapt only through wrappers. |
-| `src/sim/vga.ts` | `src/sim/vga.ts` | Verbatim |
-| `src/verilator/{compile.ts,ErrorParser.ts,verilator_bin.js,.wasm}` | `src/sim/verilator/` | Minimal edits (WASM loading only) |
-| `AudioEngine.ts`, `AudioPlayer.ts`, `public/resampler.js` | `src/webview/audio/` | Adapt URL loading |
-| `InputController.ts`, `FPSCounter.ts` | `src/webview/` | Adapt to the panel DOM |
+| `src/sim/*` (vxmlparser, hdlwasm, hdltypes, hdlruntime, readmem, xml, util, emu, vga) | `src/sim/` | **Copy verbatim.** Adapt only through wrappers. |
+| `src/verilator/{compile.ts,ErrorParser.ts,verilator_bin.js,.wasm}` | `src/sim/verilator/` | Minimal edits (WASM loading, kept `%Error` lines) |
 | `verilog.ts` (`detectTopModule`) | `src/shared/verilog.ts` | Verbatim |
-| `src/examples/*` | `examples/<id>/{info.yaml,src/*.v,LICENSE.txt}` | Convert to TT layout |
-| `index.ts`, `ui/*`, `github/*`, `exportProject.ts`, Monaco | — | Not ported |
+| `github/loadProject.ts` (`extractIncludePaths`, `extractReadmemPaths`) | `src/shared/verilogRefs.ts` | Verbatim |
+| `src/examples/*` | `examples/<id>/{info.yaml,src/*.v,LICENSE.txt}` | Converted to TT layout |
+| `AudioEngine.ts`, `AudioPlayer.ts`, `public/resampler.js` (v1) | `src/webview/audio/` | Adapt URL loading |
+| `InputController.ts` (gamepad, v1) | `src/webview/` | Adapt to the panel DOM |
+| `InputController.ts` (keys), `FPSCounter.ts` | `src/webview/ui/controls.ts`, `renderLoop.ts` | Rewritten for the panel |
+| `index.ts`, `ui/*`, `github/*` (rest), `exportProject.ts`, Monaco | — | Not ported |
 
-Record the upstream commit for every ported file in `src/sim/UPSTREAM.md`. Keep diffs
-against upstream small so they can be re-synced.
+Every edit to an upstream file is listed, with its reason, in `src/sim/UPSTREAM.md`. Keep
+diffs against upstream small so they can be re-synced. `src/sim/verilator/messages.ts` is
+ours, not upstream.
 
 ## Architecture
 
 ```
-Extension host (Node; keep web-compatible)        Webview main thread              Compile Web Worker
-────────────────────────────────────────          ─────────────────────────        ──────────────────
-onDidChangeTextDocument (project files)
-  → idle timer (verivga.liveDelay, 300 ms)
-  → hash(sources, top) unchanged? skip
-read sources: open TextDocument, else fs
-  ──load {generation, sources, dataFiles, top}──▶ queue (1 running, 1 newest) ──▶ Verilator WASM → XML
-                                                  ◀──────────── {generation, xml, errors} ─┘
-                                                  drop if stale generation
-                                                  VerilogXMLParser → HDLModuleWASM
-                                                  swap into render loop (old keeps running until then)
-DiagnosticCollection ◀──diag {generation}──────   rAF: renderVGAFrame → canvas (736×520)
-status bar           ◀──stats (≤ 2/s)──────────   ui_in / reset / pause / audio / gamepad
+Extension host (web-compatible)           Webview main thread                        Compile Web Worker
+───────────────────────────────           ───────────────────                        ──────────────────
+PreviewSession (one per workspace folder)
+edit to a file the last load read
+  → LiveUpdate idle timer (liveDelay);
+    a save flushes it
+  → discover + SourceReader.gather (open
+    TextDocument wins, else ProjectFs)
+  → SHA-256 unchanged? skip
+  → generation++ (held while hidden)
+  ──load {generation, topModule,─────────▶ Orchestrator
+          sources, dataFiles}              → CompilerHost: CompileQueue ──compile───▶ runVerilator → XML
+                                             (1 running, 1 newest, 20 s watchdog)     string + messages
+                                           ◀──result {generation, xml?, messages, ms}──┘
+                                           superseded by a newer load? drop
+                                           buildSim: XML → HDLModuleWASM → adapter checks
+                                           RenderLoop.setSim: swap on the next frame
+                                           (the old design renders until then)
+VerilatorDiagnostics, Output ◀──compiled── every outcome; `ok` only after setSim
+  (a stale generation is dropped)          RenderLoop: rAF → adapter.renderFrame → canvas 736×520
+Output channel  ◀──runtimeError──────────  Controls: ui_in toggles, Reset, Pause, fps
+Problems view   ◀──showProblems──────────  Banner: errors, messages, no-sync hint
+(status bar, v1)◀──stats (≤ 2/s)─────────  state: loading | compiling | running | paused | error
+                ──status {message}───────▶ banner instead of a design (e.g. no sources)
+Test mode only: verivga._screenshot
+                ──control: screenshot────▶ canvas.toDataURL ──screenshot {png}──▶ host
 ```
 
 - Compiling and simulating happen **in the webview**. The host never touches
   Verilator or binaryen.
 - Verilator runs in a **Web Worker** so the animation doesn't freeze while it compiles.
-  The worker returns the XML **string**. `HDLModuleDef` is a cyclic graph, so build it
-  on the main thread and never send it across any `postMessage`.
-- Frames never cross `postMessage`. Stats go out at most twice per second.
+  The Verilator `WebAssembly.Module` is compiled once per panel and handed to every
+  worker. The worker returns the XML **string**. `HDLModuleDef` is a cyclic graph, so it is
+  built on the main thread and never sent across any `postMessage`.
+- Frames never cross `postMessage`, except a single PNG on an explicit
+  `control: screenshot` (the Test-mode frame probe now, FR-14 in v1). Stats go out at
+  most twice per second.
 - Recompiling is **latest-wins**: every load carries an increasing `generation`, and
-  anything older than the newest request gets dropped. The old simulation keeps
-  rendering until the new one is ready, so there's never a black flicker.
-- Carry `ui_in`, gamepad mode, audio and pause state over across recompiles. Only the
-  design is reset.
+  anything older than the newest request gets dropped. Results are applied strictly in
+  generation order. The old simulation keeps rendering until the new one is ready, so
+  there's never a black flicker.
+- `ui_in` and the user's pause carry over across recompiles. Only the design is reset.
 
-## Layout (planned)
+## Layout
 
 ```
-src/extension/   extension.ts, PreviewPanel.ts, project.ts, sources.ts, liveUpdate.ts, diagnostics.ts
-src/webview/     main.ts, compileQueue.ts, compileWorker.ts, simHost.ts, renderLoop.ts, ui/, audio/ (v1)
-src/webview/adapters/  tinytapeout.ts (MVP); generic.ts comes in v2. The only place pin layouts live.
-src/shared/      protocol.ts (ALL host↔webview message types), verilog.ts
-src/sim/         ported simulator + verilator/ (GPL-3.0, keep headers)
-examples/        TT-layout presets
-test/unit/       vitest   test/golden/  reference PNGs   test/e2e/  @vscode/test-electron
-docs/            requirements.md, superpowers/specs/ (approved designs), superpowers/plans/
+src/extension/   extension.ts      activate: Open Preview, one session per folder, Test-mode commands
+                 session.ts        PreviewSession: wires panel, live update, sources, diagnostics, VS Code events
+                 PreviewPanel.ts   webview panel, typed and validated message bridge, visibility
+                 webviewHtml.ts    page HTML, CSP and nonce
+                 project.ts        pickFolder, discover (info.yaml or folder fallback), top module
+                 projectFs.ts      open-document-first, cached FS reads; records the URIs a load used
+                 sources.ts        SourceReader: read and gather sources, `include`s and $readmem data
+                 liveUpdate.ts     idle timer, save flush, hash skip, generations, hidden hold
+                 diagnostics.ts    VerilatorMessage[] → DiagnosticCollection, info.yaml problems
+                 sessionUtil.ts    Output channel formatting, liveDelay clamp
+src/webview/     main.ts           composition root: DOM, compiler boot (WASM + Blob-URL worker)
+                 orchestrator.ts   load → compile → build → swap state machine, banner, stats
+                 compilerHost.ts   owns the worker: queue, watchdog, crash restart
+                 compileQueue.ts   latest-wins scheduler (pure)
+                 compileWorker.ts  classic worker: runVerilator → {xml, messages}
+                 workerProtocol.ts main ↔ worker messages (may carry a WebAssembly.Module)
+                 simHost.ts        buildSim: XML → HDLModuleWASM, validated and reset
+                 renderLoop.ts     rAF loop, frame-boundary swap, fps, no-sync, runtime errors
+                 adapters/         types.ts (VgaAdapter), tinytapeout.ts: the only place pin layouts live
+                 ui/               controls.ts (ui_in, Reset, Pause, fps), banner.ts
+                 styles.css        copied to dist/webview.css
+src/shared/      protocol.ts (ALL host↔webview message types and guards), verilog.ts, verilogRefs.ts
+src/sim/         ported simulator + verilator/ (GPL-3.0, keep headers); ported specs live here too
+examples/        eight TT-layout presets
+test/unit/       vitest (fakes/: vscode, memfs)   test/golden/  frame-0 PNGs + generate.ts
+test/e2e/        preview.test.ts (desktop + web), latency.test.ts (desktop); web/ (runner, assert)
+test/fixtures/   stripes (the E2E workspace)      test/bench/   M0 timing (not in npm test)
+docs/            requirements.md, superpowers/{specs,plans,notes}/
 ```
 
-## Commands (planned)
+## Commands
 
 ```bash
 npm install
-npm run build        # esbuild, 3 bundles from one source:
-                     #   dist/extension.js      (cjs, node)       ← package.json "main"
-                     #   dist/web/extension.js  (cjs, webworker)  ← package.json "browser"
-                     #   dist/webview.js        (esm, browser)    + webview worker + wasm assets
-npm run watch        # rebuild on change; press F5 in VS Code to launch Extension Development Host
-npm run open:web     # vscode-test-web: run the extension in a local browser VS Code
-npm test             # vitest (unit + golden-frame)
-npm run test:e2e     # @vscode/test-electron smoke test (desktop)
-npm run test:web     # @vscode/test-web smoke test (headless Chromium)
-npm run typecheck    # tsc --noEmit
-npm run package      # vsce package → .vsix
+npm run build          # esbuild, from one source (browser bundles target es2022, desktop node18):
+                       #   dist/extension.js      (cjs, node)      ← package.json "main"
+                       #   dist/web/extension.js  (cjs, browser)   ← package.json "browser"
+                       #   dist/webview.js        (esm) + dist/compileWorker.js (iife)
+                       #   + dist/verilator_bin.wasm, dist/webview.css, and the E2E bundles
+npm run watch          # rebuild on change (for an Extension Development Host)
+npm run open:web       # local browser VS Code with the extension and the stripes fixture
+npm test               # vitest: unit, ported specs, golden frames
+npm run test:e2e       # @vscode/test-cli + test-electron, desktop, incl. the latency gate
+npm run test:web       # @vscode/test-web, headless Chromium, --quality=stable
+npm run typecheck      # tsc --noEmit
+npm run lint           # eslint (includes the no-Node-built-ins rule for host code)
+npm run format         # prettier --write .     (format:check = prettier --check .)
+npm run package        # vsce package → .vsix; vscode:prepublish runs a production build
+                       # (minified, no source maps, no E2E bundles)
 ```
+
+Test-only commands, registered only when `extensionMode === Test`: `verivga._lastCompiled`,
+`verivga._compiledLog`, `verivga._postToWebview` and `verivga._screenshot` (the canvas as
+a base64 PNG). They act on the most recently revealed preview.
 
 ## TinyTapeout VGA facts
 
@@ -112,9 +160,9 @@ npm run package      # vsce package → .vsix
 - Sync polarity is auto-detected (the shorter phase is the pulse). Don't assume
   active-low.
 - Reset sequence: `powercycle()`, `ena=1`, `rst_n=0`, keep `ui_in`, `tick2(10)`, `rst_n=1`.
-- Audio Pmod: sample `(uio_out & uio_oe) >> 7` every tick, average to 192 kHz, apply
+- Audio Pmod (v1): sample `(uio_out & uio_oe) >> 7` every tick, average to 192 kHz, apply
   a 20 kHz box low-pass.
-- Gamepad Pmod: drives `ui_in[4]`=latch, `[5]`=clk, `[6]`=data, as a 24-bit serial
+- Gamepad Pmod (v1): drives `ui_in[4]`=latch, `[5]`=clk, `[6]`=data, as a 24-bit serial
   frame stepped once per scanline (see `updateGamepadPmod`).
 - Top-module detection: first `module tt_um_*` (with `project.v` first), else the first
   module in `project.v`, else `tt_um_vga_example`. `.vh`/`.svh` files are include-only
@@ -129,15 +177,16 @@ npm run package      # vsce package → .vsix
   generic adapter or its settings before v2.
 - **Real-time is a feature, so guard it:** don't add work between a keystroke and the
   new frame without measuring it against NFR-3 (last keystroke → new frame ≤
-  `liveDelay` + 700 ms). Compile the Verilator `WebAssembly.Module` once per panel and
-  reuse it. Diagnostics for a stale `generation` must never overwrite newer ones.
-  Errors in half-typed code are normal, so the error banner must never cover the frame
-  or take focus.
+  `liveDelay` + 700 ms; `latency.test.ts` gates the median). Compile the Verilator
+  `WebAssembly.Module` once per panel and reuse it. Diagnostics for a stale `generation`
+  must never overwrite newer ones. Errors in half-typed code are normal, so the error
+  banner must never cover the frame or take focus.
 - **Licensing (decided):** VeriVGA is GPL-3.0-only because the 8bitworkshop-derived simulator is. Keep
   the existing license headers. Credit Tiny Tapeout (Uri Shaked) and 8bitworkshop
-  (Steven Hugg) in the README.
+  (Steven Hugg) in the README, and list bundled third-party components in `NOTICE`.
 - **Bridge:** every message type lives in `src/shared/protocol.ts` as a discriminated
-  union. Payloads must be JSON-serializable. Add a type before using a message.
+  union with a runtime guard. Payloads must be JSON-serializable. Add a type before using
+  a message.
 - **Host I/O:** use `vscode.workspace.fs` and open `TextDocument.getText()` (unsaved
   buffers win), never Node `fs`, so Remote, WSL and web keep working.
 - **Web-safe host code:** `src/extension/` and `src/shared/` must not import Node
@@ -148,33 +197,51 @@ npm run package      # vsce package → .vsix
   limited on github.dev's virtual FS. Read only what's needed, and cache by URI until a
   change event invalidates the entry.
 - **Feature parity:** any feature must work in both `test:e2e` and `test:web` before
-  it's done.
+  it's done. E2E tests live in `test/e2e/` and run in both hosts; use the `assert`
+  functions that `test/e2e/web/assert.ts` provides (the web host has no Node `assert`).
 - **Webview security:** nonce on every script, a CSP that includes `'wasm-unsafe-eval'`
   and `worker-src blob:` (for the compile worker and the AudioWorklet), no remote
   origins, and `localResourceRoots` set to `dist/` only.
 - **Hot path:** in the per-tick and per-pixel loop, read `jmod.data8[offset]`, not
   `jmod.state.*`. No allocations, closures created per pixel, or logging.
-- **Lifecycle:** pause the rAF loop when the panel is hidden (`onDidChangeViewState`).
-  Dispose `HDLModuleWASM` before re-init. Cache the Verilator WASM bytes across
+- **Lifecycle:** pause the rAF loop when the panel is hidden (the webview's
+  `visibilitychange`; the host holds loads via `onDidChangeViewState`). Dispose
+  `HDLModuleWASM` before re-init. Cache the Verilator WASM bytes across
   recompiles.
 - **Diagnostics:** Verilator lines and columns are 1-based, VS Code's are 0-based.
-  Map Emscripten-FS paths (`src/<name>`) back to the original URIs. Keep warnings as
+  Map Emscripten-FS paths (`src/<name>`) back to the original URIs: normalize the path
+  first (`src/src//defs.vh` for an `include`), then strip one `src/`. Keep warnings as
   warnings.
 - **Style:** TypeScript strict, ES modules. Prettier as upstream: `printWidth: 100`,
   `singleQuote`, `trailingComma: 'all'`, 2 spaces. Plain DOM in the webview, no UI
   framework.
 - **Tests:** pure logic (discovery, top detection, error mapping, decode) gets vitest.
-  Each example gets a golden-frame test (port upstream `sim/vga-integration.spec.ts`,
-  which uses pngjs). Any change under `src/sim/` must keep the golden frames identical.
+  Each example has a golden-frame test (`test/golden/`, pngjs). Any change under
+  `src/sim/` must keep the golden frames identical.
 
 ## Gotchas
 
 - The bundled Verilator is **4.205** (8bitworkshop build). SystemVerilog support is
   limited. Flags are `--cc -O3 -Wall -Wno-EOFNEWLINE -Wno-DECLFILENAME --x-assign fast
-  --debug-check -Isrc/`, and `--debug-check` is what produces the XML. Don't "upgrade"
-  the flags blindly.
+  --debug-check -Isrc/` (plus `-I` for each source subdirectory), and `--debug-check` is
+  what produces the XML. Don't "upgrade" the flags blindly.
+- Verilator rejects a `--top-module` that another module instantiates, before our
+  TinyTapeout port check runs. A test that needs a non-TT top must make it genuinely
+  top-level (a standalone module).
+- Upstream simulator bug: `$readmemh`/`$readmemb` with a literal filename of 8 bytes or
+  fewer (e.g. `"mem.hex"`) fails with "could not validate wasm module". Documented in the
+  README; fixing it means an `hdlwasm` edit (upstream code).
 - binaryen's ESM build uses top-level await, so the webview bundle must be ESM loaded
-  with `<script type="module">` and target `esnext`.
+  with `<script type="module">` and target `es2022` or later.
+- The compile worker is a classic (iife) worker started from a Blob URL: a webview can't
+  start a worker from its resource URI, and Emscripten only detects a worker when
+  `importScripts` exists.
+- Formatting: run `npm run format` / `npm run format:check` (or
+  `node node_modules/prettier/bin/prettier.cjs`). Never `npx prettier`: a shell hook (rtk)
+  may rewrite it to a global prettier 2, which can't load the v3 organize-imports plugin
+  and corrupts generics.
+- Desktop E2E opens a real VS Code window. Its user-data dir lives in the OS temp dir
+  (`.vscode-test.mjs`) because macOS caps the IPC socket path at 103 characters.
 - `AudioContext` needs a user gesture. `audioWorklet.addModule()` needs an allowed
   URL; use a Blob URL if the webview URI is refused.
 - The webview only gets keyboard events while focused. Don't rely on keys for core
