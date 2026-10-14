@@ -6,14 +6,76 @@ body {
 
 body {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #000;
+  flex-direction: column;
+  background: var(--vscode-editor-background);
+  color: var(--vscode-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
 }
 
-/* 736×520 frame, scaled to fit the panel with crisp pixels. */
+/* 736×520 frame, scaled to fit the panel width with crisp pixels. */
 #screen {
-  max-width: 100%;
-  max-height: 100%;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 736 / 520;
   image-rendering: pixelated;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+}
+
+.bits {
+  display: flex;
+  gap: 2px;
+}
+
+.controls button,
+.banner button {
+  color: var(--vscode-button-secondaryForeground);
+  background: var(--vscode-button-secondaryBackground);
+  border: 1px solid var(--vscode-button-border, transparent);
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.controls button:hover,
+.banner button:hover {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.controls button[aria-pressed='true'] {
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+}
+
+.fps,
+.compiling {
+  color: var(--vscode-descriptionForeground);
+}
+
+/* A strip above the canvas, never over it. */
+.banner-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  color: var(--vscode-inputValidation-errorForeground, var(--vscode-foreground));
+  background: var(--vscode-inputValidation-errorBackground);
+  border-bottom: 1px solid var(--vscode-inputValidation-errorBorder);
+}
+
+.banner-hint {
+  padding: 4px 8px;
+  color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
+  background: var(--vscode-inputValidation-warningBackground);
+  border-bottom: 1px solid var(--vscode-inputValidation-warningBorder);
+}
+
+[hidden] {
+  display: none !important;
 }
