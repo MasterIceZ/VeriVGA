@@ -1,8 +1,11 @@
 # VeriVGA
 
 Live VGA preview of [Tiny Tapeout](https://tinytapeout.com) Verilog designs, inside VS Code.
-Edit your Verilog and the rendered frame updates about 300 ms after you stop typing. No save
-needed. It works in desktop VS Code and in the browser (vscode.dev, github.dev).
+Edit your Verilog and the rendered frame updates `verivga.liveDelay` (300 ms by default) after
+you stop typing. No save needed.
+
+VeriVGA runs in desktop VS Code. It is also built web-compatible and tested in a browser host
+(`@vscode/test-web`); it will be available on vscode.dev and github.dev once it's published.
 
 VeriVGA is a port of [vga-playground](https://github.com/TinyTapeout/vga-playground) from a
 browser app to a VS Code extension.
@@ -20,6 +23,18 @@ browser app to a VS Code extension.
 Verilator diagnostics, timing and internal messages go to the **VeriVGA** Output channel
 (View > Output, then pick "VeriVGA").
 
+## Controls
+
+The bar above the frame drives the design while it runs:
+
+- **`ui_in` toggles:** eight buttons, `0` to `7`, one per `ui_in` bit. While the preview
+  panel has focus, the keys `0` to `7` toggle the same bits.
+- **Reset:** resets the design, keeping the `ui_in` values. The key `R` does the same.
+- **Pause / Resume:** stops and restarts the simulation. A paused preview stays paused
+  across recompiles.
+
+The fps readout next to them shows the frame rate.
+
 ## Settings
 
 | Setting              | Default | Description                                                              |
@@ -27,6 +42,8 @@ Verilator diagnostics, timing and internal messages go to the **VeriVGA** Output
 | `verivga.liveUpdate` | `true`  | Re-render the preview automatically while typing.                        |
 | `verivga.liveDelay`  | `300`   | Milliseconds to wait after the last edit before recompiling (0 to 2000). |
 | `verivga.topModule`  | `""`    | Name of the top module. Empty means auto-detect.                         |
+
+In a multi-root workspace, each folder can set them separately.
 
 ## Limits
 
