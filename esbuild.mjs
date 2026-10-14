@@ -2,7 +2,7 @@ import * as esbuild from 'esbuild';
 import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 
 const watch = process.argv.includes('--watch');
-const production = process.env.NODE_ENV === 'production';
+const production = process.argv.includes('--production') || process.env.NODE_ENV === 'production';
 
 const common = {
   bundle: true,
@@ -15,7 +15,7 @@ const common = {
 // ENVIRONMENT_IS_NODE branch. Never loaded in a browser, so leave them unresolved.
 const emscriptenNodeOnly = ['fs', 'path', 'child_process', 'module'];
 
-const configs = [
+const allConfigs = [
   {
     ...common,
     entryPoints: ['src/extension/extension.ts'],
@@ -76,6 +76,10 @@ const configs = [
     alias: { assert: './test/e2e/web/assert.ts' },
   },
 ];
+
+// The production build (vsce prepublish) ships runtime files only; the E2E bundles are the
+// last two entries.
+const configs = production ? allConfigs.slice(0, -2) : allConfigs;
 
 function copyAssets() {
   mkdirSync('dist', { recursive: true });
