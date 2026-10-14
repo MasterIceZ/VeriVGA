@@ -216,4 +216,59 @@ describe('LiveUpdate', () => {
     await Promise.all([p1, p2]);
     expect(sent.map((m) => m.generation)).toEqual([1, 2]);
   });
+
+  test('timer-path errors go to onError; a later edit still works', async () => {
+    const onError = vi.fn();
+    const unhandled = vi.fn();
+    process.on('unhandledRejection', unhandled);
+    try {
+      let fail = true;
+      const { lu, sent } = setup({
+        onError,
+        gather: () => (fail ? Promise.reject(new Error('boom')) : Promise.resolve(payload())),
+      });
+      lu.onEdit();
+      await vi.advanceTimersByTimeAsync(300);
+      await until(() => onError.mock.calls.length === 1);
+      expect(onError.mock.calls[0][0]).toBeInstanceOf(Error);
+      await new Promise<void>((r) => setImmediate(r));
+      expect(unhandled).not.toHaveBeenCalled();
+      expect(sent).toHaveLength(0);
+
+      fail = false;
+      lu.onEdit();
+      await vi.advanceTimersByTimeAsync(300);
+      await until(() => sent.length === 1);
+      expect(sent.map((m) => m.generation)).toEqual([1]);
+    } finally {
+      process.off('unhandledRejection', unhandled);
+    }
+  });
+
+  test('timer-path errors are swallowed when onError is absent', async () => {
+    const { lu } = setup({ gather: () => Promise.reject(new Error('boom')) });
+    lu.onEdit();
+    await vi.advanceTimersByTimeAsync(300);
+    await new Promise<void>((r) => setImmediate(r));
+  });
+
+  test('a failed run clears the queued rerun', async () => {
+    let rejectFirst!: (e: Error) => void;
+    let calls = 0;
+    const { lu, sent } = setup({
+      gather: () =>
+        ++calls === 1
+          ? new Promise<LoadPayload>((_, rej) => (rejectFirst = rej))
+          : Promise.resolve(payload()),
+    });
+    const p1 = lu.flush();
+    await until(() => calls === 1);
+    const p2 = lu.flush(); // queues a rerun
+    rejectFirst(new Error('boom'));
+    await expect(p1).rejects.toThrow('boom');
+    await expect(p2).rejects.toThrow('boom');
+    expect(calls).toBe(1); // stale rerun was not executed
+    await lu.flush();
+    expect(sent.map((m) => m.generation)).toEqual([1]);
+  });
 });

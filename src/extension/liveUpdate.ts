@@ -13,6 +13,8 @@ export interface LiveUpdateDeps {
   /** null = nothing to send (e.g. project discovery failed). */
   gather(): Promise<LoadPayload | null>;
   send(msg: LoadMessage): void;
+  /** Receives errors from the timer path (no caller to reject to). */
+  onError?(err: unknown): void;
 }
 
 const sortedEntries = (r: Record<string, string>): [string, string][] =>
@@ -48,7 +50,7 @@ export class LiveUpdate {
     this.clearTimer();
     this.timer = setTimeout(() => {
       this.timer = undefined;
-      void this.trigger();
+      this.trigger().catch((err: unknown) => this.d.onError?.(err));
     }, this.d.delayMs());
   }
 
@@ -113,6 +115,7 @@ export class LiveUpdate {
       }
     } finally {
       this.inFlight = undefined;
+      this.rerun = undefined;
     }
   }
 
