@@ -7,12 +7,14 @@
   "license": "GPL-3.0-only",
   "repository": {
     "type": "git",
-    "url": "git@github.com:MasterIceZ/VeriVGA.git"
+    "url": "https://github.com/MasterIceZ/VeriVGA"
   },
   "engines": {
     "vscode": "^1.90.0"
   },
   "categories": [
+    "Visualization",
+    "Education",
     "Other"
   ],
   "main": "./dist/extension.js",
@@ -66,9 +68,10 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:e2e": "vscode-test",
-    "test:web": "vscode-test-web --browserType=chromium --headless --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/index.js test/fixtures/stripes",
-    "open:web": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. test/fixtures/stripes",
-    "package": "vsce package"
+    "test:web": "vscode-test-web --browserType=chromium --quality=stable --headless --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/index.js test/fixtures/stripes",
+    "open:web": "vscode-test-web --browserType=chromium --quality=stable --extensionDevelopmentPath=. test/fixtures/stripes",
+    "package": "vsce package",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
@@ -93,5 +96,15 @@
   "dependencies": {
     "binaryen": "117.0.0",
     "yaml": "^2.9.1"
-  }
+  },
+  "keywords": [
+    "verilog",
+    "systemverilog",
+    "vga",
+    "tinytapeout",
+    "verilator",
+    "fpga",
+    "simulation",
+    "preview"
+  ]
 }
