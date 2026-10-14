@@ -11,6 +11,10 @@ const common = {
   logLevel: 'info',
 };
 
+// Node-only modules that Emscripten (Verilator, binaryen) requires inside its
+// ENVIRONMENT_IS_NODE branch. Never loaded in a browser, so leave them unresolved.
+const emscriptenNodeOnly = ['fs', 'path', 'child_process', 'module'];
+
 const configs = [
   {
     ...common,
@@ -37,7 +41,7 @@ const configs = [
     platform: 'browser',
     format: 'esm',
     target: 'es2022',
-    external: ['vscode', 'fs', 'path'],
+    external: ['vscode', ...emscriptenNodeOnly],
   },
   {
     // Emscripten only detects a worker when importScripts exists, so no module worker.
@@ -47,7 +51,29 @@ const configs = [
     platform: 'browser',
     format: 'iife',
     target: 'es2022',
-    external: ['vscode', 'fs', 'path'],
+    external: ['vscode', ...emscriptenNodeOnly],
+  },
+  // E2E tests. Desktop: one cjs/node file per test for @vscode/test-cli.
+  {
+    ...common,
+    entryPoints: ['test/e2e/**/*.test.ts'],
+    outbase: 'test/e2e',
+    outdir: 'dist/test/e2e',
+    platform: 'node',
+    format: 'cjs',
+    target: 'node18',
+    external: ['vscode'],
+  },
+  // Web: the mocha runner, with the tests bundled in, for @vscode/test-web.
+  {
+    ...common,
+    entryPoints: ['test/e2e/web/index.ts'],
+    outfile: 'dist/web/test/index.js',
+    platform: 'browser',
+    format: 'cjs',
+    target: 'es2022',
+    external: ['vscode'],
+    alias: { assert: './test/e2e/web/assert.ts' },
   },
 ];
 

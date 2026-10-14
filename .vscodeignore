@@ -5,3 +5,6 @@ node_modules/**
 **/*.map
 .superpowers/**
 .claude/**
+.vscode-test.mjs
+dist/test/**
+dist/web/test/**
