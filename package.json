@@ -72,10 +72,12 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
+    "@types/pngjs": "^6.0.5",
     "@types/vscode": "~1.90.0",
     "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.28.2",
     "eslint": "^9.39.5",
+    "pngjs": "^7.0.0",
     "prettier": "^3.9.10",
     "prettier-plugin-organize-imports": "^4.3.0",
     "typescript": "^5.9.3",
