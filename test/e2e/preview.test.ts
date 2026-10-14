@@ -131,6 +131,21 @@ async function screenshot(): Promise<string> {
   return text;
 }
 
+/**
+ * Polls screenshots (up to 5 s) until one differs from every frame in `seen`. The webview only
+ * draws while VS Code reports the page visible, and on a desktop that depends on window
+ * stacking the test can't control, so a fixed sleep between two screenshots is flaky.
+ */
+async function nextDifferentFrame(seen: string[], what: string): Promise<string> {
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
+    const frame = await screenshot();
+    if (!seen.includes(frame)) return frame;
+    await sleep(100);
+  }
+  throw new Error(`no new frame within 5 s: ${what}`);
+}
+
 /** Swaps the R and G expressions of the stripes design: same timing, different colors. */
 function swapRG(text: string): string {
   const swapped = text
@@ -189,10 +204,8 @@ suite('preview', () => {
     await ensurePreview();
     await waitForCompiled((c) => c.ok);
     const first = await screenshot();
-    await sleep(300);
-    const second = await screenshot();
-    // Stripes scrolls every frame, so equal frames 300 ms apart mean nothing is drawing.
-    assert.notStrictEqual(second, first, 'two frames 300 ms apart are identical');
+    // Stripes scrolls every frame, so a new frame means the canvas is being drawn.
+    const second = await nextDifferentFrame([first], 'the canvas never changed');
 
     const before = await lastHostGeneration();
     const doc = await editText(projectV(), swapRG);
@@ -201,12 +214,8 @@ suite('preview', () => {
       edited = await waitForHostCompiled(before, () => true);
       assert.strictEqual(edited.ok, true, `messages: ${JSON.stringify(edited.messages)}`);
       // `compiled` is posted before the swap; the new design is drawn from the next frame.
-      await sleep(100);
-      const recolored = await screenshot();
-      assert.notStrictEqual(recolored, first, 'the edited frame equals a pre-edit frame');
-      assert.notStrictEqual(recolored, second, 'the edited frame equals a pre-edit frame');
-      await sleep(300);
-      assert.notStrictEqual(await screenshot(), recolored, 'the edited design stopped drawing');
+      const recolored = await nextDifferentFrame([first, second], 'no frame after the edit');
+      await nextDifferentFrame([recolored], 'the edited design stopped drawing');
     } finally {
       await revert(doc);
     }
