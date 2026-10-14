@@ -1,0 +1,90 @@
+{
+  "name": "verivga",
+  "displayName": "VeriVGA",
+  "description": "Live VGA preview of TinyTapeout Verilog designs.",
+  "version": "0.0.1",
+  "publisher": "mastericez",
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:MasterIceZ/VeriVGA.git"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "browser": "./dist/web/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "commands": [
+      {
+        "command": "verivga.openPreview",
+        "title": "VeriVGA: Open Preview",
+        "icon": "$(open-preview)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "verivga.openPreview",
+          "when": "resourceExtname =~ /^\\.(s?v|s?vh)$/",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "VeriVGA",
+      "properties": {
+        "verivga.liveUpdate": {
+          "type": "boolean",
+          "default": true,
+          "description": "Re-render the preview automatically while typing."
+        },
+        "verivga.liveDelay": {
+          "type": "number",
+          "default": 300,
+          "minimum": 0,
+          "maximum": 2000,
+          "description": "Milliseconds to wait after the last edit before recompiling."
+        },
+        "verivga.topModule": {
+          "type": "string",
+          "default": "",
+          "description": "Name of the top module. Empty means auto-detect."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:e2e": "echo \"test:e2e is configured in Task 3\" && exit 1",
+    "test:web": "echo \"test:web is configured in Task 3\" && exit 1",
+    "open:web": "echo \"open:web is configured in Task 3\" && exit 1",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.5",
+    "@types/vscode": "~1.90.0",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.12.0",
+    "prettier": "^3.9.10",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.2",
+    "vitest": "^5.0.4"
+  },
+  "dependencies": {
+    "binaryen": "117.0.0",
+    "yaml": "^2.9.1"
+  }
+}

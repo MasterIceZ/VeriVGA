@@ -1,0 +1,13 @@
+VeriVGA is licensed under the GNU General Public License v3.0 only (see LICENSE).
+
+This project is a port of vga-playground and incorporates third-party work:
+
+- Tiny Tapeout / Uri Shaked: vga-playground
+  https://github.com/TinyTapeout/vga-playground
+  Portions are licensed under the Apache License 2.0.
+
+- 8bitworkshop / Steven Hugg: the Verilog simulator and the Verilator WebAssembly
+  build (GPL-3.0).
+  https://github.com/sehugg/8bitworkshop
+
+Original copyright and license headers are preserved in the ported files under src/sim/.
